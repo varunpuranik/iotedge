@@ -1,6 +1,6 @@
 ﻿{
-    "dockerHostUrl": "npipe://./pipe/docker_engine",
+    "dockerHostUrl": "tcp://10.91.139.29:2376",
     "testSuite": [
-        "test-config-windows-x64.json"
+        "test-config-x64.json"
       ]
 }

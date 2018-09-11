@@ -7,6 +7,9 @@
             "$type": "RunCommandValidator",
             "command": "docker",
             "args": "run --rm --link mongo-server:mongo-server mongo:3.4.4 sh -c \"exec mongo --quiet --eval 'db.serverStatus().version' mongo-server:27017/test\"",
+            "env":  {
+                "DOCKER_HOST": "tcp://10.91.139.29:2376"
+            },
             "outputEquals": "3.4.4"
         }
     },
@@ -19,6 +22,9 @@
             "$type": "RunCommandValidator",
             "command": "docker",
             "args": "run --rm --link nginx-server:nginx-server appropriate/curl curl -s -o /dev/null -w '%{http_code}' http://nginx-server",
+            "env":  {
+                "DOCKER_HOST": "tcp://10.91.139.29:2376"
+            },
             "outputEquals": "'200'"
         }
     }
