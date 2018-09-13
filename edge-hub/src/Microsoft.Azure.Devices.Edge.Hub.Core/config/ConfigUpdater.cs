@@ -25,6 +25,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Config
         public async Task Init(IConfigSource configProvider)
         {
             Preconditions.CheckNotNull(configProvider, nameof(configProvider));
+            Events.Initializing();
             try
             {
                 using (await this.updateLock.LockAsync())
@@ -114,7 +115,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Config
                 UpdatingConfig,
                 UpdatedRoutes,
                 UpdatedStoreAndForwardConfig,
-                EmptyConfig
+                EmptyConfig,
+                Initializing
             }
 
             internal static void Initialized()
@@ -160,6 +162,11 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Config
             internal static void EmptyConfigReceived()
             {
                 Log.LogWarning((int)EventIds.EmptyConfig, FormattableString.Invariant($"Empty edge hub configuration received. Ignoring..."));
+            }
+
+            public static void Initializing()
+            {
+                Log.LogInformation((int)EventIds.Initializing, FormattableString.Invariant($"Initializing edge hub configuration"));
             }
         }
     }
