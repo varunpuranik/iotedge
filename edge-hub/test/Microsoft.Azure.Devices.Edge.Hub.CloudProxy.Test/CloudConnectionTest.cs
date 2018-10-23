@@ -413,19 +413,19 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
             Assert.Equal(tokenGetter.Result, (clientCredentials3 as ITokenCredentials)?.Token);
         }
 
-        static async Task GetCloudConnectionTest(Func<IClientCredentials> credentialsGenerator, IClientProvider clientProvider)
+        static async Task GetCloudConnectionTest(Func<ITokenCredentials> credentialsGenerator, IClientProvider clientProvider)
         {
             var transportSettings = new ITransportSettings[] { new AmqpTransportSettings(TransportType.Amqp_Tcp_Only) };
             var messageConverterProvider = new MessageConverterProvider(new Dictionary<Type, IMessageConverter> { [typeof(TwinCollection)] = Mock.Of<IMessageConverter>() });
             var cloudConnection = new CloudConnection((_, __) => { }, transportSettings, messageConverterProvider, clientProvider, Mock.Of<ICloudListener>(), TokenProvider, DeviceScopeIdentitiesCache, TimeSpan.FromMinutes(60), true);
 
-            IClientCredentials clientCredentials1 = credentialsGenerator();
-            ICloudProxy cloudProxy1 = await cloudConnection.CreateOrUpdateAsync(clientCredentials1);
+            ITokenCredentials clientCredentials1 = credentialsGenerator();
+            ICloudProxy cloudProxy1 = await cloudConnection.UpdateTokenAsync(clientCredentials1);
             Assert.True(cloudProxy1.IsActive);
             Assert.Equal(cloudProxy1, cloudConnection.CloudProxy.OrDefault());
 
-            IClientCredentials clientCredentials2 = credentialsGenerator();
-            ICloudProxy cloudProxy2 = await cloudConnection.CreateOrUpdateAsync(clientCredentials2);
+            ITokenCredentials clientCredentials2 = credentialsGenerator();
+            ICloudProxy cloudProxy2 = await cloudConnection.UpdateTokenAsync(clientCredentials2);
             Assert.Equal(cloudProxy2, cloudConnection.CloudProxy.OrDefault());
             Assert.True(cloudProxy2.IsActive);
             Assert.False(cloudProxy1.IsActive);
@@ -466,7 +466,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
             return new SharedKeyCredentials(identity, "dummyConnStr", string.Empty);
         }
 
-        static IClientCredentials GetMockClientCredentialsWithToken(string hostname = "dummy.azure-devices.net",
+        static ITokenCredentials GetMockClientCredentialsWithToken(string hostname = "dummy.azure-devices.net",
             string deviceId = "device1")
         {
             string token = TokenHelper.CreateSasToken(hostname);
