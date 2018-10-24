@@ -150,7 +150,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
                 }
                 else if(clientCredentials is ITokenCredentials clientTokenCredentails)
                 {
-                    ICloudConnection cc = await CloudConnection.Create(
+                    ICloudConnection cc = await ClientTokenCloudConnection.Create(
                         clientTokenCredentails,
                         connectionStatusChangedHandler,
                         this.transportSettings,
@@ -181,7 +181,6 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
             try
             {                
                 var cloudListener = new CloudListener(this.edgeHub.Expect(() => new InvalidOperationException("EdgeHub reference should not be null")), identity.Id);
-
                 Option<ServiceIdentity> serviceIdentity = await this.deviceScopeIdentitiesCache.GetServiceIdentity(identity.Id);
                 return await serviceIdentity
                     .Map(async si =>

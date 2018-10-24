@@ -155,7 +155,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
 
         protected override bool CallbacksEnabled => this.callbacksEnabled;
 
-        protected override Option<ICloudProxy> GetCloudProxy => this.cloudProxy;
+        protected override Option<ICloudProxy> GetCloudProxy() => this.cloudProxy;
 
         /// <summary>
         /// If the existing Identity has a usable token, then use it.

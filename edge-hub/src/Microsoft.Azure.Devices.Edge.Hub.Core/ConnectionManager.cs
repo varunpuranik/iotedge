@@ -25,7 +25,6 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core
         readonly ConcurrentDictionary<string, ConnectedDevice> devices = new ConcurrentDictionary<string, ConnectedDevice>();
         readonly ICloudConnectionProvider cloudConnectionProvider;
         readonly int maxClients;
-        readonly ICredentialsCache credentialsCache;
         readonly string edgeDeviceId;
         readonly string edgeModuleId;
 
@@ -36,14 +35,12 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core
 
         public ConnectionManager(
             ICloudConnectionProvider cloudConnectionProvider,
-            ICredentialsCache credentialsCache,
             string edgeDeviceId,
             string edgeModuleId,
             int maxClients = DefaultMaxClients)
         {
             this.cloudConnectionProvider = Preconditions.CheckNotNull(cloudConnectionProvider, nameof(cloudConnectionProvider));
             this.maxClients = Preconditions.CheckRange(maxClients, 1, nameof(maxClients));
-            this.credentialsCache = Preconditions.CheckNotNull(credentialsCache, nameof(credentialsCache));
             this.edgeDeviceId = Preconditions.CheckNonWhiteSpace(edgeDeviceId, nameof(edgeDeviceId));
             this.edgeModuleId = Preconditions.CheckNonWhiteSpace(edgeModuleId, nameof(edgeModuleId));
             Util.Metrics.RegisterGaugeCallback(() => Metrics.SetConnectedClientCountGauge(this.GetConnectedClients().Count()));
@@ -170,14 +167,18 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core
                 {
                     try
                     {
-                        if (credentials is ITokenCredentials tokenCredentials)
+                        if (!(credentials is ITokenCredentials tokenCredentials))
                         {
-                            await c.UpdateTokenAsync(tokenCredentials);
-                            return Try.Success(c);
+                            throw new InvalidOperationException($"Cannot update credentials of type {credentials.AuthenticationType} for {credentials.Identity.Id}");
+                        }
+                        else if (!(c is IClientTokenCloudConnection clientTokenCloudConnection))
+                        {
+                            throw new InvalidOperationException($"Cannot update token for an existing cloud connection that is not based on client token for {credentials.Identity.Id}");
                         }
                         else
                         {
-                            throw new InvalidOperationException($"Cannot update credentials of type {credentials.AuthenticationType} for {credentials.Identity.Id}");
+                            await clientTokenCloudConnection.UpdateTokenAsync(tokenCredentials);
+                            return Try.Success(c);
                         }
                     }
                     catch (Exception ex)

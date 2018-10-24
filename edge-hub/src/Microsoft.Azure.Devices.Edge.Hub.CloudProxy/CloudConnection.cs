@@ -25,7 +25,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
         readonly ICloudListener cloudListener;
         readonly TimeSpan idleTimeout;
         readonly bool closeOnIdleTimeout;        
-        readonly Option<ICloudProxy> cloudProxy;
+        Option<ICloudProxy> cloudProxy;
         
         protected CloudConnection(
             IIdentity identity,
@@ -86,7 +86,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
 
         protected Action<string, CloudConnectionStatus> ConnectionStatusChangedHandler { get; }
 
-        protected virtual Option<ICloudProxy> GetCloudProxy => this.cloudProxy;
+        protected virtual Option<ICloudProxy> GetCloudProxy() => this.cloudProxy;
 
         protected async Task<ICloudProxy> CreateNewCloudProxyAsync(ITokenProvider newTokenProvider)
         {
