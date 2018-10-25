@@ -53,7 +53,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
             {
                 typeof(TimeoutException),
                 typeof(IOException),
-                typeof(EdgeHubIOException)
+                typeof(EdgeHubIOException),
+                typeof(EdgeHubConnectionException)
             };
 
             Util.Option<IDeviceProxy> devicePoxy = Option.None<IDeviceProxy>();
