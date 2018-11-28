@@ -148,10 +148,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
         {
             Option<DeploymentStatus> status = Option.None<DeploymentStatus>();
             ModuleSet moduleSetToReport = null;
+            Console.WriteLine($"{DateTime.UtcNow} - In Reconcile... getting lock");
             using (await this.reconcileLock.LockAsync(token))
             {
                 try
                 {
+                    Console.WriteLine($"{DateTime.UtcNow} - In Reconcile... Getting data");
                     (ModuleSet current, DeploymentConfigInfo deploymentConfigInfo, Exception exception) = await this.GetReconcileData(token);
                     moduleSetToReport = current;
                     if (exception != null)
@@ -159,6 +161,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
                         throw exception;
                     }
 
+                    Console.WriteLine($"{DateTime.UtcNow} - In Reconcile... Processing");
                     DeploymentConfig deploymentConfig = deploymentConfigInfo.DeploymentConfig;
                     if (deploymentConfig != DeploymentConfig.Empty)
                     {
@@ -168,13 +171,18 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
                         // no new identities need to be created. This will simplify the logic to allow EdgeAgent to work when offline.
                         // But that required ModuleSet.Diff to be updated to include modules updated by deployment, and modules updated by state change. 
                         IImmutableDictionary<string, IModuleIdentity> identities = await this.moduleIdentityLifecycleManager.GetModuleIdentitiesAsync(desiredModuleSet, current);
+                        Console.WriteLine($"{DateTime.UtcNow} - In Reconcile... got identities, getting plan");
+
                         Plan plan = await this.planner.PlanAsync(desiredModuleSet, current, deploymentConfig.Runtime, identities);
+                        Console.WriteLine($"{DateTime.UtcNow} - In Reconcile... got plan.. processing plan");
                         if (!plan.IsEmpty)
                         {
                             try
                             {
                                 bool result = await this.planRunner.ExecuteAsync(deploymentConfigInfo.Version, plan, token);
+                                Console.WriteLine($"{DateTime.UtcNow} - In Reconcile... plan executed. Updating config");
                                 await this.UpdateCurrentConfig(deploymentConfigInfo);
+                                Console.WriteLine($"{DateTime.UtcNow} - In Reconcile... plan executed. Updated config");
                                 if (result)
                                 {
                                     status = Option.Some(DeploymentStatus.Success);
@@ -218,7 +226,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
                             break;
                     }
                 }
+                Console.WriteLine($"{DateTime.UtcNow} - In Reconcile... updating reported properties");
                 await this.reporter.ReportAsync(token, moduleSetToReport, await this.environment.GetRuntimeInfoAsync(), this.currentConfig.Version, status);
+                Console.WriteLine($"{DateTime.UtcNow} - In Reconcile... updated reported properties");
             }
         }
 

@@ -162,7 +162,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
                     {
                         try
                         {
+                            logger.LogInformation("In program.cs - starting reconcile.. ");
                             await agent.ReconcileAsync(cts.Token);
+                            logger.LogInformation("In program.cs - Completed reconcile.. ");
                         }
                         catch (Exception ex) when (!ex.IsFatal())
                         {
