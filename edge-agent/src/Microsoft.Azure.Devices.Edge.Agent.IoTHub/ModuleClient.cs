@@ -40,6 +40,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             Option<string> productInfo) =>
             Create(upstreamProtocol, initialize, u => CreateAndOpenDeviceClient(u, connectionString, statusChangedHandler, proxy, productInfo));
 
+        public Client.ModuleClient Client => this.deviceClient;
+
         public Task SetDesiredPropertyUpdateCallbackAsync(DesiredPropertyUpdateCallback onDesiredPropertyChanged) =>
             this.deviceClient.SetDesiredPropertyUpdateCallbackAsync(onDesiredPropertyChanged, null);
 

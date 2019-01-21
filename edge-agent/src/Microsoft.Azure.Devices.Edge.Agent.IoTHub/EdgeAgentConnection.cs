@@ -2,17 +2,20 @@
 namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 {
     using System;
+    using System.Text;
     using System.Threading.Tasks;
     using System.Timers;
     using Microsoft.Azure.Devices.Client;
     using Microsoft.Azure.Devices.Edge.Agent.Core;
     using Microsoft.Azure.Devices.Edge.Agent.Core.ConfigSources;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Serde;
+    using Microsoft.Azure.Devices.Edge.Storage;
     using Microsoft.Azure.Devices.Edge.Util;
     using Microsoft.Azure.Devices.Edge.Util.Concurrency;
     using Microsoft.Azure.Devices.Edge.Util.TransientFaultHandling;
     using Microsoft.Azure.Devices.Shared;
     using Microsoft.Extensions.Logging;
+    using Newtonsoft.Json;
     using ExponentialBackoff = Microsoft.Azure.Devices.Edge.Util.TransientFaultHandling.ExponentialBackoff;
 
     public class EdgeAgentConnection : IEdgeAgentConnection
@@ -28,6 +31,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
         readonly RetryStrategy retryStrategy;
         readonly Timer refreshTimer;
 
+        LogsProvider logsProvider;
+        LogsClient logsClient;
         Option<IModuleClient> deviceClient;
         TwinCollection desiredProperties;
         Option<TwinCollection> reportedProperties;
@@ -129,10 +134,39 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
                     {
                         await d.SetDesiredPropertyUpdateCallbackAsync(this.OnDesiredPropertiesUpdated);
                         await d.SetMethodHandlerAsync(PingMethodName, this.PingMethodCallback);
+                        await d.SetMethodHandlerAsync("GetLogs", this.GetLogsCallback);
                     });
                 this.deviceClient = Option.Some(dc);
 
                 await this.RefreshTwinAsync();
+            }
+        }
+
+        async Task<MethodResponse> GetLogsCallback(MethodRequest methodRequest, object usercontext)
+        {
+            var logsRequestData = methodRequest.DataAsJson.FromJson<LogsRequestData>();
+            if (logsRequestData.Follow)
+            {
+                InitStream(logsRequestData.ModuleId);
+                return new MethodResponse(200);
+            }
+            else
+            {
+                string logs = await this.logsProvider.GetLogs(logsRequestData.ModuleId);
+                byte[] logBytes = Encoding.UTF8.GetBytes(logs);
+                return new MethodResponse(logBytes, 200);
+            }
+        }
+
+        async void InitStream(string moduleId)
+        {
+            try
+            {
+                await this.logsClient.InitLogsStreaming(moduleId);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error in starting logs stream for {moduleId} - {e}");                
             }
         }
 
@@ -267,6 +301,15 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 
         async Task<bool> WaitForDeviceClientInitialization() =>
             await Task.WhenAny(this.initTask, Task.Delay(DeviceClientInitializationWaitTime)) == this.initTask;
+
+        class LogsRequestData
+        {
+            [JsonProperty("module")]
+            public string ModuleId { get; set; }
+
+            [JsonProperty("follow")]
+            public bool Follow { get; set; }
+        }
 
         static class Events
         {

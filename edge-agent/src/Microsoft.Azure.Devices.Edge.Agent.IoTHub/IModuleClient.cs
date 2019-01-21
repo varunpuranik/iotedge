@@ -8,6 +8,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 
     public interface IModuleClient : IDisposable
     {
+        Client.ModuleClient Client { get; }
+
         Task SetDesiredPropertyUpdateCallbackAsync(DesiredPropertyUpdateCallback onDesiredPropertyChanged);
 
         Task SetMethodHandlerAsync(string methodName, MethodCallback callback);

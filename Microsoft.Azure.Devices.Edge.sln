@@ -167,6 +167,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DirectMethodSender", "edge-
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DirectMethodReceiver", "edge-modules\DirectMethodReceiver\DirectMethodReceiver.csproj", "{013D53C7-3AB5-41A4-9A8D-0F2C47238773}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.Devices.Shared", "..\..\..\workspace\azure-iot-sdk-csharp\shared\src\Microsoft.Azure.Devices.Shared.csproj", "{D7669242-F342-47C9-8040-323924294159}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.Devices.Client", "..\..\..\workspace\azure-iot-sdk-csharp\iothub\device\src\Microsoft.Azure.Devices.Client.csproj", "{7284B7B5-589C-46AB-95E2-49C47E226E71}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Microsoft.Azure.Devices", "..\..\..\workspace\azure-iot-sdk-csharp\iothub\service\src\Microsoft.Azure.Devices.csproj", "{AFC1670A-5F5D-4354-87ED-53A697FF242E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		CheckInBuild|Any CPU = CheckInBuild|Any CPU
@@ -527,6 +533,30 @@ Global
 		{013D53C7-3AB5-41A4-9A8D-0F2C47238773}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{013D53C7-3AB5-41A4-9A8D-0F2C47238773}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{013D53C7-3AB5-41A4-9A8D-0F2C47238773}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D7669242-F342-47C9-8040-323924294159}.CheckInBuild|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7669242-F342-47C9-8040-323924294159}.CheckInBuild|Any CPU.Build.0 = Debug|Any CPU
+		{D7669242-F342-47C9-8040-323924294159}.CodeCoverage|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7669242-F342-47C9-8040-323924294159}.CodeCoverage|Any CPU.Build.0 = Debug|Any CPU
+		{D7669242-F342-47C9-8040-323924294159}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7669242-F342-47C9-8040-323924294159}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7669242-F342-47C9-8040-323924294159}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7669242-F342-47C9-8040-323924294159}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7284B7B5-589C-46AB-95E2-49C47E226E71}.CheckInBuild|Any CPU.ActiveCfg = Debug|Any CPU
+		{7284B7B5-589C-46AB-95E2-49C47E226E71}.CheckInBuild|Any CPU.Build.0 = Debug|Any CPU
+		{7284B7B5-589C-46AB-95E2-49C47E226E71}.CodeCoverage|Any CPU.ActiveCfg = Debug|Any CPU
+		{7284B7B5-589C-46AB-95E2-49C47E226E71}.CodeCoverage|Any CPU.Build.0 = Debug|Any CPU
+		{7284B7B5-589C-46AB-95E2-49C47E226E71}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7284B7B5-589C-46AB-95E2-49C47E226E71}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7284B7B5-589C-46AB-95E2-49C47E226E71}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7284B7B5-589C-46AB-95E2-49C47E226E71}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AFC1670A-5F5D-4354-87ED-53A697FF242E}.CheckInBuild|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFC1670A-5F5D-4354-87ED-53A697FF242E}.CheckInBuild|Any CPU.Build.0 = Debug|Any CPU
+		{AFC1670A-5F5D-4354-87ED-53A697FF242E}.CodeCoverage|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFC1670A-5F5D-4354-87ED-53A697FF242E}.CodeCoverage|Any CPU.Build.0 = Debug|Any CPU
+		{AFC1670A-5F5D-4354-87ED-53A697FF242E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFC1670A-5F5D-4354-87ED-53A697FF242E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFC1670A-5F5D-4354-87ED-53A697FF242E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFC1670A-5F5D-4354-87ED-53A697FF242E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
