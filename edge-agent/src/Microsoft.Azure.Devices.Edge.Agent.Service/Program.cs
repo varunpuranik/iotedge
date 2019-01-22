@@ -128,7 +128,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
                 switch (configSourceConfig.ToLowerInvariant())
                 {
                     case "twin":
-                        builder.RegisterModule(new TwinConfigSourceModule(backupConfigFilePath, configuration, versionInfo, TimeSpan.FromSeconds(configRefreshFrequencySecs)));
+                        string managementUri = configuration.GetValue<string>(Constants.EdgeletManagementUriVariableName);
+                        builder.RegisterModule(new TwinConfigSourceModule(backupConfigFilePath, configuration, versionInfo, TimeSpan.FromSeconds(configRefreshFrequencySecs), new Uri(managementUri)));
                         break;
 
                     case "local":
@@ -164,6 +165,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
                         try
                         {
                             await agent.ReconcileAsync(cts.Token);
+                            //await Task.CompletedTask;
                         }
                         catch (Exception ex) when (!ex.IsFatal())
                         {
