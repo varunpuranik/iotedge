@@ -37,7 +37,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             using (HttpClient httpClient = HttpClientHelper.GetHttpClient(this.managementEndpoint))
             {
                 var baseUrl = HttpClientHelper.GetBaseUrl(this.managementEndpoint);
-                string logsUrl = $"{baseUrl}/modules/{module}/logs?api-version={Constants.EdgeletManagementApiVersion}&follow={follow}";
+                string logsUrl = $"{baseUrl}/modules/{module}/logs?api-version={Constants.EdgeletManagementApiVersion}&follow={follow.ToString().ToLowerInvariant()}";
+                Console.WriteLine($"Logs url - {logsUrl}");
                 var logsUri = new Uri(logsUrl);
                 var httpRequest = new HttpRequestMessage(HttpMethod.Get, logsUri);
                 httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));

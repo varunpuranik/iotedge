@@ -22,17 +22,20 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
         readonly IConfiguration configuration;
         readonly VersionInfo versionInfo;
         readonly TimeSpan configRefreshFrequency;
+        readonly Uri managementUri;
 
         public TwinConfigSourceModule(
             string backupConfigFilePath,
             IConfiguration config,
             VersionInfo versionInfo,
-            TimeSpan configRefreshFrequency)
+            TimeSpan configRefreshFrequency,
+            Uri managementUri)
         {
             this.backupConfigFilePath = Preconditions.CheckNonWhiteSpace(backupConfigFilePath, nameof(backupConfigFilePath));
             this.configuration = Preconditions.CheckNotNull(config, nameof(config));
             this.versionInfo = Preconditions.CheckNotNull(versionInfo, nameof(versionInfo));
             this.configRefreshFrequency = configRefreshFrequency;
+            this.managementUri = managementUri;
         }
 
         protected override void Load(ContainerBuilder builder)
@@ -41,9 +44,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
             builder.Register(
                     c =>
                     {
+                        var logsProvider = new LogsProvider(this.managementUri);
                         var serde = c.Resolve<ISerde<DeploymentConfig>>();
                         var deviceClientprovider = c.Resolve<IModuleClientProvider>();
-                        IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(deviceClientprovider, serde, this.configRefreshFrequency);
+                        IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(deviceClientprovider, serde, this.configRefreshFrequency, logsProvider);
                         return edgeAgentConnection;
                     })
                 .As<IEdgeAgentConnection>()

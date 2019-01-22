@@ -45,16 +45,18 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 
         public EdgeAgentConnection(
             IModuleClientProvider moduleClientProvider,
-            ISerde<DeploymentConfig> desiredPropertiesSerDe)
-            : this(moduleClientProvider, desiredPropertiesSerDe, TransientRetryStrategy, DefaultConfigRefreshFrequency)
+            ISerde<DeploymentConfig> desiredPropertiesSerDe,
+            LogsProvider logsProvider)
+            : this(moduleClientProvider, desiredPropertiesSerDe, TransientRetryStrategy, DefaultConfigRefreshFrequency, logsProvider)
         {
         }
 
         public EdgeAgentConnection(
             IModuleClientProvider moduleClientProvider,
             ISerde<DeploymentConfig> desiredPropertiesSerDe,
-            TimeSpan configRefreshFrequency)
-            : this(moduleClientProvider, desiredPropertiesSerDe, TransientRetryStrategy, configRefreshFrequency)
+            TimeSpan configRefreshFrequency,
+            LogsProvider logsProvider)
+            : this(moduleClientProvider, desiredPropertiesSerDe, TransientRetryStrategy, configRefreshFrequency, logsProvider)
         {
         }
 
@@ -62,11 +64,13 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             IModuleClientProvider moduleClientProvider,
             ISerde<DeploymentConfig> desiredPropertiesSerDe,
             RetryStrategy retryStrategy,
-            TimeSpan refreshConfigFrequency)
+            TimeSpan refreshConfigFrequency,
+            LogsProvider logsProvider)
         {
             this.desiredPropertiesSerDe = Preconditions.CheckNotNull(desiredPropertiesSerDe, nameof(desiredPropertiesSerDe));
             this.deploymentConfigInfo = Option.None<DeploymentConfigInfo>();
             this.reportedProperties = Option.None<TwinCollection>();
+            this.logsProvider = logsProvider;
             this.deviceClient = Option.None<IModuleClient>();
             this.retryStrategy = Preconditions.CheckNotNull(retryStrategy, nameof(retryStrategy));
             this.refreshTimer = new Timer(refreshConfigFrequency.TotalMilliseconds);
@@ -134,9 +138,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
                     {
                         await d.SetDesiredPropertyUpdateCallbackAsync(this.OnDesiredPropertiesUpdated);
                         await d.SetMethodHandlerAsync(PingMethodName, this.PingMethodCallback);
-                        await d.SetMethodHandlerAsync("GetLogs", this.GetLogsCallback);
+                        await d.SetMethodHandlerAsync("Logs", this.GetLogsCallback);
                     });
                 this.deviceClient = Option.Some(dc);
+                this.logsClient = new LogsClient(this.logsProvider, dc.Client);
 
                 await this.RefreshTwinAsync();
             }
@@ -144,17 +149,30 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 
         async Task<MethodResponse> GetLogsCallback(MethodRequest methodRequest, object usercontext)
         {
-            var logsRequestData = methodRequest.DataAsJson.FromJson<LogsRequestData>();
-            if (logsRequestData.Follow)
+            Console.WriteLine("Received request to get logs...");
+            try
             {
-                InitStream(logsRequestData.ModuleId);
-                return new MethodResponse(200);
+                var logsRequestData = methodRequest.DataAsJson.FromJson<LogsRequestData>();
+                if (logsRequestData.Follow)
+                {
+                    this.InitStream(logsRequestData.ModuleId);
+                    return new MethodResponse(200);
+                }
+                else
+                {
+                    Console.WriteLine($"Getting logs without follow");
+                    string logs = await this.logsProvider.GetLogs(logsRequestData.ModuleId);
+                    Console.WriteLine($"Logs for module {logsRequestData.ModuleId} = {logs}");
+                    var response = new LogsResponseData { Logs = logs, ModuleId = logsRequestData.ModuleId };
+                    var responsString = response.ToJson();
+                    byte[] logBytes = Encoding.UTF8.GetBytes(responsString);
+                    return new MethodResponse(logBytes, 200);
+                }
             }
-            else
+            catch (Exception e)
             {
-                string logs = await this.logsProvider.GetLogs(logsRequestData.ModuleId);
-                byte[] logBytes = Encoding.UTF8.GetBytes(logs);
-                return new MethodResponse(logBytes, 200);
+                Console.WriteLine($"Error handling Logs callback - {e}");
+                return new MethodResponse(500);
             }
         }
 
@@ -302,9 +320,18 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
         async Task<bool> WaitForDeviceClientInitialization() =>
             await Task.WhenAny(this.initTask, Task.Delay(DeviceClientInitializationWaitTime)) == this.initTask;
 
+        class LogsResponseData
+        {
+            [JsonProperty("moduleId")]
+            public string ModuleId { get; set; }
+
+            [JsonProperty("logs")]
+            public string Logs { get; set; }
+        }
+
         class LogsRequestData
         {
-            [JsonProperty("module")]
+            [JsonProperty("moduleId")]
             public string ModuleId { get; set; }
 
             [JsonProperty("follow")]

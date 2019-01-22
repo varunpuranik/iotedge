@@ -152,8 +152,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             ITransportSettings settings = GetTransportSettings(upstreamProtocol, proxy);
             Events.AttemptingConnectionWithTransport(settings.GetTransportType());
             Client.ModuleClient deviceClient = await connectionString
-                .Map(cs => Task.FromResult(Client.ModuleClient.CreateFromConnectionString(cs, new[] { settings })))
-                .GetOrElse(() => Client.ModuleClient.CreateFromEnvironmentAsync(new[] { settings }));
+                .Map(cs => Task.FromResult(Devices.Client.ModuleClient.CreateFromConnectionString(cs, new[] { settings })))
+                .GetOrElse(() => Devices.Client.ModuleClient.CreateFromEnvironmentAsync(new[] { settings }));
             productInfo.ForEach(p => deviceClient.ProductInfo = p);
             await OpenAsync(statusChangedHandler, deviceClient);
             Events.ConnectedWithTransport(settings.GetTransportType());
