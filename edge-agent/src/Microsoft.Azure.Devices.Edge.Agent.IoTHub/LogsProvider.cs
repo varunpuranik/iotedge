@@ -19,9 +19,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             this.managementEndpoint = managementEndpoint;
         }
 
-        public async Task<string> GetLogs(string moduleId)
+        public async Task<string> GetLogs(string moduleId, int tail)
         {
-            Stream stream = await GetStream(moduleId, true);
+            Stream stream = await GetStream(moduleId, false, tail);
             var reader = new StreamReader(stream, Encoding.UTF8);
             string data = await reader.ReadToEndAsync();
             return data;
@@ -29,15 +29,19 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 
         public Task<Stream> GetLogsStream(string moduleId)
         {
-            return GetStream(moduleId, true);
+            return GetStream(moduleId, true, null);
         }
 
-        async Task<Stream> GetStream(string module, bool follow)
+        async Task<Stream> GetStream(string module, bool follow, int? tail)
         {
             using (HttpClient httpClient = HttpClientHelper.GetHttpClient(this.managementEndpoint))
             {
                 var baseUrl = HttpClientHelper.GetBaseUrl(this.managementEndpoint);
                 string logsUrl = $"{baseUrl}/modules/{module}/logs?api-version={Constants.EdgeletManagementApiVersion}&follow={follow.ToString().ToLowerInvariant()}";
+                if (tail.HasValue)
+                {
+                    logsUrl = $"{logsUrl}&tail={tail.Value}";
+                }
                 Console.WriteLine($"Logs url - {logsUrl}");
                 var logsUri = new Uri(logsUrl);
                 var httpRequest = new HttpRequestMessage(HttpMethod.Get, logsUri);

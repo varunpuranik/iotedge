@@ -2,6 +2,7 @@
 namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 {
     using System;
+    using System.ComponentModel;
     using System.Text;
     using System.Threading.Tasks;
     using System.Timers;
@@ -161,7 +162,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
                 else
                 {
                     Console.WriteLine($"Getting logs without follow");
-                    string logs = await this.logsProvider.GetLogs(logsRequestData.ModuleId);
+                    string logs = await this.logsProvider.GetLogs(logsRequestData.ModuleId, logsRequestData.Tail);
                     Console.WriteLine($"Logs for module {logsRequestData.ModuleId} = {logs}");
                     var response = new LogsResponseData { Logs = logs, ModuleId = logsRequestData.ModuleId };
                     var responsString = response.ToJson();
@@ -336,6 +337,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 
             [JsonProperty("follow")]
             public bool Follow { get; set; }
+
+            [JsonProperty(PropertyName = "tail", DefaultValueHandling = DefaultValueHandling.Populate)]
+            [DefaultValue(20)]
+            public int Tail { get; set; }
         }
 
         static class Events

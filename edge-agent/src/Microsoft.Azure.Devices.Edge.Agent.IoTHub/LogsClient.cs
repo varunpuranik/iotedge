@@ -26,12 +26,13 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 
             try
             {
+                Console.WriteLine($"Initializing stream for logs.. ");
                 using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
                 {
-                    DeviceStreamRequest streamRequest = await this.moduleClient.WaitForDeviceStreamRequestAsync(cancellationTokenSource.Token).ConfigureAwait(false);
-
+                    DeviceStreamRequest streamRequest = await this.moduleClient.WaitForDeviceStreamRequestAsync(cancellationTokenSource.Token).ConfigureAwait(false);                    
                     if (streamRequest != null)
                     {
+                        Console.WriteLine($"Accepting stream request.. ");
                         await this.moduleClient.AcceptDeviceStreamRequestAsync(streamRequest, cancellationTokenSource.Token).ConfigureAwait(false);
 
                         using (ClientWebSocket webSocket = await GetStreamingClientAsync(streamRequest, cancellationTokenSource.Token).ConfigureAwait(false))
