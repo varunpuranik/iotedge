@@ -14,6 +14,7 @@ namespace Microsoft.Azure.Devices.Routing.Core.Endpoints
     using Microsoft.Azure.Devices.Routing.Core.Util;
     using Microsoft.Azure.Devices.Routing.Core.Util.Concurrency;
     using Microsoft.Extensions.Logging;
+    using Nito.AsyncEx;
     using static System.FormattableString;
 
     public class StoringAsyncEndpointExecutor : IEndpointExecutor
@@ -21,7 +22,7 @@ namespace Microsoft.Azure.Devices.Routing.Core.Endpoints
         readonly AtomicBoolean closed = new AtomicBoolean();
         readonly IMessageStore messageStore;
         readonly Task sendMessageTask;
-        readonly ManualResetEvent hasMessagesInQueue = new ManualResetEvent(true);
+        readonly AsyncManualResetEvent hasMessagesInQueue = new AsyncManualResetEvent(true);
         readonly ICheckpointer checkpointer;
         readonly AsyncEndpointExecutorOptions options;
         readonly EndpointExecutorFsm machine;
@@ -80,7 +81,7 @@ namespace Microsoft.Azure.Devices.Routing.Core.Endpoints
                 {
                     try
                     {
-                        this.hasMessagesInQueue.WaitOne(this.options.BatchTimeout);
+                        await this.hasMessagesInQueue.WaitAsync(this.options.BatchTimeout);
                         IMessage[] messages = (await iterator.GetNext(this.options.BatchSize)).ToArray();
                         await this.ProcessMessages(messages);
                         Events.SendMessagesSuccess(this, messages);
