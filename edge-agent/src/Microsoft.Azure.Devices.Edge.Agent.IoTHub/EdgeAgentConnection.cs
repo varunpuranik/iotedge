@@ -78,7 +78,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             this.refreshTimer = new Timer(refreshConfigFrequency.TotalMilliseconds);
             this.refreshTimer.Elapsed += (_, __) => this.RefreshTimerElapsed();
             this.initTask = this.CreateAndInitDeviceClient(Preconditions.CheckNotNull(moduleClientProvider, nameof(moduleClientProvider)));
-
+            this.logsClient = new LogsClient(this.logsProvider, null);
             Events.TwinRefreshInit(refreshConfigFrequency);
         }
 
@@ -141,9 +141,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
                         await d.SetDesiredPropertyUpdateCallbackAsync(this.OnDesiredPropertiesUpdated);
                         await d.SetMethodHandlerAsync(PingMethodName, this.PingMethodCallback);
                         await d.SetMethodHandlerAsync("Logs", this.GetLogsCallback);
+                        this.logsClient.Init();
                     });
-                this.deviceClient = Option.Some(dc);
-                this.logsClient = new LogsClient(this.logsProvider, dc.Client);
+                this.deviceClient = Option.Some(dc);                
 
                 await this.RefreshTwinAsync();
             }
@@ -157,7 +157,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
                 var logsRequestData = methodRequest.DataAsJson.FromJson<LogsRequestData>();
                 if (logsRequestData.Follow)
                 {
-                    this.InitStream(logsRequestData.ModuleId, logsRequestData.Tail);
+                    //this.InitStream(logsRequestData.ModuleId, logsRequestData.Tail);
                     return new MethodResponse(200);
                 }
                 else
@@ -180,18 +180,18 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             }
         }
 
-        async void InitStream(string moduleId, int? tail)
-        {
-            try
-            {
-                 Stream stream = await this.logsProvider.GetLogsStream(moduleId, true, tail);
-                await this.logsClient.InitLogsStreaming(moduleId, stream);
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Error in starting logs stream for {moduleId} - {e}");                
-            }
-        }
+        //async void InitStream(string moduleId, int? tail)
+        //{
+        //    try
+        //    {
+        //         Stream stream = await this.logsProvider.GetLogsStream(moduleId, true, tail);
+        //        await this.logsClient.InitLogsStreaming(moduleId, stream);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        Console.WriteLine($"Error in starting logs stream for {moduleId} - {e}");                
+        //    }
+        //}
 
         Task<MethodResponse> PingMethodCallback(MethodRequest methodRequest, object userContext) => PingMethodResponse;
 
@@ -334,7 +334,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             public string Logs { get; set; }
         }
 
-        class LogsRequestData
+        public class LogsRequestData
         {
             [JsonProperty("moduleId")]
             public string ModuleId { get; set; }
