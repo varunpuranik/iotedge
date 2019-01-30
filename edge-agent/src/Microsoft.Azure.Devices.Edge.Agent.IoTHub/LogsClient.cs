@@ -13,47 +13,48 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
     {
         LogsProvider logsProvider;
         Client.ModuleClient moduleClient;
+        Client.DeviceClient deviceClient;
 
         public LogsClient(LogsProvider logsProvier, Client.ModuleClient moduleClient)
         {
             this.logsProvider = logsProvier;
             this.moduleClient = moduleClient;
+            string connectionString = Environment.GetEnvironmentVariable("DeviceConnectionString");
+            if (!string.IsNullOrWhiteSpace(connectionString))
+            {
+                this.deviceClient = DeviceClient.CreateFromConnectionString(connectionString);
+                Console.WriteLine("Using DeviceClient for streams");
+            }
         }
 
-        public async Task InitLogsStreaming(string moduleId)
+        public async Task InitLogsStreaming(string moduleId, Stream logsStream)
         {
             byte[] buffer = new byte[1024];
 
             try
             {
                 Console.WriteLine($"Initializing stream for logs.. ");
-                using (var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                DeviceStreamRequest streamRequest = await this.deviceClient.WaitForDeviceStreamRequestAsync(CancellationToken.None).ConfigureAwait(false);
+                if (streamRequest != null)
                 {
-                    DeviceStreamRequest streamRequest = await this.moduleClient.WaitForDeviceStreamRequestAsync(cancellationTokenSource.Token).ConfigureAwait(false);                    
-                    if (streamRequest != null)
-                    {
-                        Console.WriteLine($"Accepting stream request.. ");
-                        await this.moduleClient.AcceptDeviceStreamRequestAsync(streamRequest, cancellationTokenSource.Token).ConfigureAwait(false);
+                    Console.WriteLine($"Accepting stream request.. ");
+                    await this.deviceClient.AcceptDeviceStreamRequestAsync(streamRequest, CancellationToken.None).ConfigureAwait(false);
 
-                        using (ClientWebSocket webSocket = await GetStreamingClientAsync(streamRequest, cancellationTokenSource.Token).ConfigureAwait(false))
+                    using (ClientWebSocket webSocket = await GetStreamingClientAsync(streamRequest, CancellationToken.None).ConfigureAwait(false))
+                    {                        
+                        Console.WriteLine($"Sending logs to server...");
+                        int bytesRead;
+                        while ((bytesRead = await logsStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                         {
-                            Stream stream = await this.logsProvider.GetLogsStream(moduleId);
-                            Console.WriteLine($"Sending logs to server...");
-                            int bytesRead = 0;
-                            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                            {
-                                var arraySegment = new ArraySegment<byte>(buffer, 0, bytesRead);
-                                await webSocket.SendAsync(
-                                    arraySegment,
-                                    WebSocketMessageType.Binary,
-                                    true,
-                                    CancellationToken.None);
-                            }
-                            await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, String.Empty, cancellationTokenSource.Token).ConfigureAwait(false);
+                            var arraySegment = new ArraySegment<byte>(buffer, 0, bytesRead);
+                            await webSocket.SendAsync(
+                                arraySegment,
+                                WebSocketMessageType.Binary,
+                                true,
+                                CancellationToken.None);
                         }
+                        await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, String.Empty, CancellationToken.None).ConfigureAwait(false);
                     }
-
-                    await this.moduleClient.CloseAsync();
                 }
             }
             catch (Exception e)

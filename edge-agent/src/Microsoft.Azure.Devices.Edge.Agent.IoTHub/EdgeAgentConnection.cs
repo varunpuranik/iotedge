@@ -3,6 +3,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 {
     using System;
     using System.ComponentModel;
+    using System.IO;
     using System.Text;
     using System.Threading.Tasks;
     using System.Timers;
@@ -156,13 +157,15 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
                 var logsRequestData = methodRequest.DataAsJson.FromJson<LogsRequestData>();
                 if (logsRequestData.Follow)
                 {
-                    this.InitStream(logsRequestData.ModuleId);
+                    this.InitStream(logsRequestData.ModuleId, logsRequestData.Tail);
                     return new MethodResponse(200);
                 }
                 else
                 {
                     Console.WriteLine($"Getting logs without follow");
-                    string logs = await this.logsProvider.GetLogs(logsRequestData.ModuleId, logsRequestData.Tail);
+                    Stream stream = await this.logsProvider.GetLogsStream(logsRequestData.ModuleId, false, logsRequestData.Tail.HasValue ? logsRequestData.Tail.Value : 20);
+                    var reader = new StreamReader(stream, Encoding.UTF8);
+                    string logs = await reader.ReadToEndAsync();
                     Console.WriteLine($"Logs for module {logsRequestData.ModuleId} = {logs}");
                     var response = new LogsResponseData { Logs = logs, ModuleId = logsRequestData.ModuleId };
                     var responsString = response.ToJson();
@@ -177,11 +180,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             }
         }
 
-        async void InitStream(string moduleId)
+        async void InitStream(string moduleId, int? tail)
         {
             try
             {
-                await this.logsClient.InitLogsStreaming(moduleId);
+                 Stream stream = await this.logsProvider.GetLogsStream(moduleId, true, tail);
+                await this.logsClient.InitLogsStreaming(moduleId, stream);
             }
             catch (Exception e)
             {
@@ -338,9 +342,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             [JsonProperty("follow")]
             public bool Follow { get; set; }
 
-            [JsonProperty(PropertyName = "tail", DefaultValueHandling = DefaultValueHandling.Populate)]
-            [DefaultValue(20)]
-            public int Tail { get; set; }
+            [JsonProperty(PropertyName = "tail")]
+            public int? Tail { get; set; }
         }
 
         static class Events

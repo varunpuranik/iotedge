@@ -19,20 +19,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             this.managementEndpoint = managementEndpoint;
         }
 
-        public async Task<string> GetLogs(string moduleId, int tail)
-        {
-            Stream stream = await GetStream(moduleId, false, tail);
-            var reader = new StreamReader(stream, Encoding.UTF8);
-            string data = await reader.ReadToEndAsync();
-            return data;
-        }
-
-        public Task<Stream> GetLogsStream(string moduleId)
-        {
-            return GetStream(moduleId, true, null);
-        }
-
-        async Task<Stream> GetStream(string module, bool follow, int? tail)
+        public async Task<Stream> GetLogsStream(string module, bool follow, int? tail)
         {
             using (HttpClient httpClient = HttpClientHelper.GetHttpClient(this.managementEndpoint))
             {
