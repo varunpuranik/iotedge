@@ -49,8 +49,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             {
                 try
                 {
+                    CancellationToken cts = CancellationToken.None;
+                    
                     Console.WriteLine($"Waiting for stream request...");
-                    DeviceStreamRequest streamRequest = await this.deviceClient.WaitForDeviceStreamRequestAsync(CancellationToken.None).ConfigureAwait(false);
+                    DeviceStreamRequest streamRequest = await this.deviceClient.WaitForDeviceStreamRequestAsync(cts).ConfigureAwait(false);
                     Console.WriteLine("Received stream request.. ");
                     if (streamRequest != null)
                     {
