@@ -92,11 +92,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
                 return syncResult;
             }
 
-            public Task CloseAsync(CancellationToken token)
-            {
-                // TODO - No-op
-                return TaskEx.Done;
-            }
+            public Task CloseAsync(CancellationToken token) => Task.CompletedTask;
 
             static bool IsRetryable(Exception ex) => ex != null && RetryableExceptions.Contains(ex.GetType());
 
