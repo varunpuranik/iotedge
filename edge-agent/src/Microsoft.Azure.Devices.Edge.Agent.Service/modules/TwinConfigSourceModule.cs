@@ -37,16 +37,31 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
 
         protected override void Load(ContainerBuilder builder)
         {
+            // IModuleLogsProvider
+            builder.Register(async c =>
+                {
+                    IRuntimeInfoProvider runtimeInfoProvider = await c.Resolve<Task<IRuntimeInfoProvider>>();
+                    return new ModuleLogsProvider(runtimeInfoProvider) as IModuleLogsProvider;
+                })
+                .As<Task<IModuleLogsProvider>>()
+                .SingleInstance();
+
             // IEdgeAgentConnection
             builder.Register(
-                    c =>
+                    async c =>
                     {
+                        var moduleLogsProviderTask = c.Resolve<Task<IModuleLogsProvider>>();
                         var serde = c.Resolve<ISerde<DeploymentConfig>>();
                         var deviceClientprovider = c.Resolve<IModuleClientProvider>();
-                        IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(deviceClientprovider, serde, this.configRefreshFrequency);
+                        IModuleLogsProvider moduleLogsProvider = await moduleLogsProviderTask;
+                        IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(
+                            deviceClientprovider,
+                            serde,
+                            this.configRefreshFrequency,
+                            new EdgeAgentConnectionLogsManager(moduleLogsProvider));
                         return edgeAgentConnection;
                     })
-                .As<IEdgeAgentConnection>()
+                .As<Task<IEdgeAgentConnection>>()
                 .SingleInstance();
 
             // Task<IConfigSource>
@@ -54,8 +69,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                     async c =>
                     {
                         var serde = c.Resolve<ISerde<DeploymentConfigInfo>>();
-                        var edgeAgentConnection = c.Resolve<IEdgeAgentConnection>();
+                        var edgeAgentConnectionTask = c.Resolve<Task<IEdgeAgentConnection>>();
                         IEncryptionProvider encryptionProvider = await c.Resolve<Task<IEncryptionProvider>>();
+                        IEdgeAgentConnection edgeAgentConnection = await edgeAgentConnectionTask;
                         var twinConfigSource = new TwinConfigSource(edgeAgentConnection, this.configuration);
                         IConfigSource backupConfigSource = new FileBackupConfigSource(this.backupConfigFilePath, twinConfigSource, serde, encryptionProvider);
                         return backupConfigSource;
@@ -65,7 +81,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
 
             // IReporter
             builder.Register(
-                    c =>
+                    async c =>
                     {
                         var runtimeInfoDeserializerTypes = new Dictionary<string, Type>
                         {
@@ -98,12 +114,15 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                             { typeof(IModule), moduleDeserializerTypes }
                         };
 
+                        var edgeAgentConnectionTask = c.Resolve<Task<IEdgeAgentConnection>>();
+                        IEdgeAgentConnection edgeAgentConnection = await edgeAgentConnectionTask;
+
                         return new IoTHubReporter(
-                            c.Resolve<IEdgeAgentConnection>(),
+                            edgeAgentConnection,
                             new TypeSpecificSerDe<AgentState>(deserializerTypesMap),
                             this.versionInfo) as IReporter;
                     })
-                .As<IReporter>()
+                .As<Task<IReporter>>()
                 .SingleInstance();
 
             base.Load(builder);
