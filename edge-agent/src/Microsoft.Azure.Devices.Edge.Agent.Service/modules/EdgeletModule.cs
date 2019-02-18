@@ -101,9 +101,14 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                 .As<Task<ICommandFactory>>()
                 .SingleInstance();
 
-            // IModuleRuntimeInfoProvider
-            builder.Register(c => new RuntimeInfoProvider<DockerReportedConfig>(c.Resolve<IModuleManager>()))
-                .As<IRuntimeInfoProvider>()
+            // Task<IRuntimeInfoProvider>
+            builder.Register(
+                    c =>
+                    {
+                        IRuntimeInfoProvider runtimeInfoProvider = new RuntimeInfoProvider<DockerReportedConfig>(c.Resolve<IModuleManager>());
+                        return Task.FromResult(runtimeInfoProvider);
+                    })
+                .As<Task<IRuntimeInfoProvider>>()
                 .SingleInstance();
 
             // Task<IEnvironmentProvider>
@@ -112,8 +117,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                     {
                         var moduleStateStore = c.Resolve<IEntityStore<string, ModuleState>>();
                         var restartPolicyManager = c.Resolve<IRestartPolicyManager>();
-                        var runtimeInfoProvider = c.Resolve<IRuntimeInfoProvider>();
-                        IEnvironmentProvider dockerEnvironmentProvider = await DockerEnvironmentProvider.CreateAsync(runtimeInfoProvider, moduleStateStore, restartPolicyManager);
+                        var runtimeInfoProviderTask = c.Resolve<Task<IRuntimeInfoProvider>>();
+                        IRuntimeInfoProvider runtimeInfoProvider = await runtimeInfoProviderTask;
+                        IEnvironmentProvider dockerEnvironmentProvider = await DockerEnvironmentProvider.CreateAsync(
+                            runtimeInfoProvider,
+                            moduleStateStore,
+                            restartPolicyManager);
                         return dockerEnvironmentProvider;
                     })
                 .As<Task<IEnvironmentProvider>>()
