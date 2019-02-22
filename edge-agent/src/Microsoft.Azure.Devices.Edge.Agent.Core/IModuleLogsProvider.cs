@@ -8,8 +8,6 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
 
     public interface IModuleLogsProvider
     {
-        Task<Stream> GetLogs(string module);
-
-        Task<string> GetLogs(string module, Option<int> tail);
-    }    
+        Task<string> GetLogsAsText(string module, Option<int> tail);
+    }
 }
