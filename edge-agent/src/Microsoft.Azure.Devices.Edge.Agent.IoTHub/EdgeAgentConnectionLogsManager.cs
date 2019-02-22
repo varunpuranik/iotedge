@@ -32,7 +32,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             {
                 var logsRequestData = methodRequest.DataAsJson.FromJson<LogsRequestData>();
                 Console.WriteLine($"Getting logs without follow");
-                string logs = await this.moduleLogsProvider.GetLogs(logsRequestData.ModuleId, Option.None<int>());
+                string logs = await this.moduleLogsProvider.GetLogsAsText(logsRequestData.ModuleId, Option.None<int>());
                 Console.WriteLine($"Logs for module {logsRequestData.ModuleId} = {logs}");
                 var response = new LogsResponseData { Logs = logs, ModuleId = logsRequestData.ModuleId };
                 var responsString = response.ToJson();
