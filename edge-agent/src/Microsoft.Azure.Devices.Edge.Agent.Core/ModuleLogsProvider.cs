@@ -8,6 +8,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
+    using akka::Akka;
     using Akka.Streams;
     using Akka.Streams.Dsl;
     using Microsoft.Azure.Devices.Edge.Util;
@@ -16,6 +17,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
 
     public class ModuleLogsProvider : IModuleLogsProvider
     {
+        static readonly Flow<ByteString, ByteString, NotUsed> FramingFlow
+            = Framing.LengthField(4, int.MaxValue, 4, ByteOrder.BigEndian);
+
         readonly IRuntimeInfoProvider runtimeInfoProvider;
 
         public ModuleLogsProvider(IRuntimeInfoProvider runtimeInfoProvider)
@@ -23,9 +27,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
             this.runtimeInfoProvider = runtimeInfoProvider;
         }
 
-        public Task<Stream> GetLogs(string module) => this.runtimeInfoProvider.GetModuleLogs(module, false, Option.None<int>(), CancellationToken.None);
-
-        public async Task<string> GetLogs(string module, Option<int> tail)
+        public async Task<string> GetLogsAsText(string module, Option<int> tail)
         {
             Stream stream = await this.runtimeInfoProvider.GetModuleLogs(module, false, tail, CancellationToken.None);
             string logsString = await this.FilterLogs(stream);
@@ -64,17 +66,16 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
 
         async Task<string> FilterLogs(Stream stream)
         {
-            using (var system = ActorSystem.Create("system"))
-            using (var materializer = system.Materializer())
+            using (ActorSystem system = ActorSystem.Create("system"))
+            using (ActorMaterializer materializer = system.Materializer())
             {
-                var flow = Framing.LengthField(4, Int32.MaxValue, 4, ByteOrder.BigEndian);
                 var source = StreamConverters.FromInputStream(() => stream);
                 var seqSink = Sink.Seq<string>();
-                var graph = source
-                    .Via(flow)
+                IRunnableGraph<Task<IImmutableList<string>>> graph = source
+                    .Via(FramingFlow)
                     .Select(b => b.Slice(8))
                     .Select(b => b.ToString(Encoding.UTF8))
-                    .ToMaterialized(seqSink, Keep.Right);
+                    .ToMaterialized(seqSink, Keep.Right);                    
 
                 IImmutableList<string> result = await graph.Run(materializer);
                 return string.Join("", result);
