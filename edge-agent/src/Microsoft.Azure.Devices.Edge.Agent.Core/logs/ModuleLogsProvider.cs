@@ -1,5 +1,5 @@
 // Copyright (c) Microsoft. All rights reserved.
-namespace Microsoft.Azure.Devices.Edge.Agent.Core
+namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 {
     extern alias akka;
     using System;
@@ -113,16 +113,6 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
             }
 
             return (6, null);
-        }
-
-        public class ModuleLogMessage
-        {
-            public string Stream { get; set; }
-            public int LogLevel { get; set; }
-            public string LogMessage { get; set; }
-
-            public DateTime? TimeStamp { get; set; }
-            public string Source { get; set; }
-        }
+        }        
     }
 }
