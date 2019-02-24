@@ -100,7 +100,6 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 
         static (int logLevel, DateTime? timeStamp) ParseLogLine(string value)
         {
-            value = @"   2019-02-19 22:58:41.847 +00:00 ";
             string regexPattern = @"^\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}.\d{3}\s[+-]\d{2}:\d{2})\s";
             var regex = new Regex(regexPattern);
             var match = regex.Match(value);
