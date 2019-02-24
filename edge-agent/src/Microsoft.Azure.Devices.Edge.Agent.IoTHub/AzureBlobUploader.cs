@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
-namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
+namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 {
     using System;
     using System.IO;
     using System.Threading.Tasks;
+    using Microsoft.Azure.Devices.Edge.Agent.Core.Logs;
     using Microsoft.Azure.Devices.Edge.Util;
     using Microsoft.Azure.Devices.Edge.Util.TransientFaultHandling;
     using Microsoft.Extensions.Logging;
