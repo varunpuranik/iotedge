@@ -17,7 +17,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
         static readonly ITransientErrorDetectionStrategy TransientErrorDetectionStrategy = new ErrorDetectionStrategy();
 
         static readonly RetryStrategy TransientRetryStrategy =
-            new ExponentialBackoff(RetryCount, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(4));
+            new ExponentialBackoff(RetryCount, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(4));
 
         readonly string iotHubName;
         readonly string deviceId;

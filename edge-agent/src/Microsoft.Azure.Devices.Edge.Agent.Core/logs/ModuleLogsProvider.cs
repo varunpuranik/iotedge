@@ -16,17 +16,22 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
     using Microsoft.Azure.Devices.Edge.Util;
     using akka::Akka.Actor;
     using akka::Akka.IO;
+    using Newtonsoft.Json;
 
-    public class ModuleLogsProvider : IModuleLogsProvider
+    public class ModuleLogsProvider : IModuleLogsProvider, IDisposable
     {
         static readonly Flow<ByteString, ByteString, NotUsed> FramingFlow
             = Framing.LengthField(4, int.MaxValue, 4, ByteOrder.BigEndian);
 
         readonly IRuntimeInfoProvider runtimeInfoProvider;
+        readonly ActorSystem system;
+        readonly ActorMaterializer materializer;
 
         public ModuleLogsProvider(IRuntimeInfoProvider runtimeInfoProvider)
         {
             this.runtimeInfoProvider = runtimeInfoProvider;
+            this.system = ActorSystem.Create("system");
+            this.materializer = this.system.Materializer();
         }
 
         public async Task<string> GetLogsAsText(string module, Option<int> tail)
@@ -43,40 +48,55 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             return logMessages;
         }
 
+        public async Task<Stream> GetLogs(string module, Option<int> tail)
+        {
+            Stream stream = await this.runtimeInfoProvider.GetModuleLogs(module, false, tail, CancellationToken.None);
+            IEnumerable<ModuleLogMessage> logMessages = await this.FilterLogs(module, stream);
+            return logMessages;
+        }
+
         async Task<string> FilterLogs(Stream stream)
         {
-            using (ActorSystem system = ActorSystem.Create("system"))
-            using (ActorMaterializer materializer = system.Materializer())
-            {
-                var source = StreamConverters.FromInputStream(() => stream);
-                var seqSink = Sink.Seq<string>();
-                IRunnableGraph<Task<IImmutableList<string>>> graph = source
-                    .Via(FramingFlow)
-                    .Select(b => b.Slice(8))
-                    .Select(b => b.ToString(Encoding.UTF8))
-                    .ToMaterialized(seqSink, Keep.Right);                    
+            var source = StreamConverters.FromInputStream(() => stream);
+            var seqSink = Sink.Seq<string>();
+            IRunnableGraph<Task<IImmutableList<string>>> graph = source
+                .Via(FramingFlow)
+                .Select(b => b.Slice(8))
+                .Select(b => b.ToString(Encoding.UTF8))
+                .ToMaterialized(seqSink, Keep.Right);
 
-                IImmutableList<string> result = await graph.Run(materializer);
-                return string.Join("", result);
-            }
+            IImmutableList<string> result = await graph.Run(this.materializer);
+            return string.Join("", result);
         }
 
         async Task<IEnumerable<ModuleLogMessage>> FilterLogs(string module, Stream stream)
         {
-            using (ActorSystem system = ActorSystem.Create("system"))
-            using (ActorMaterializer materializer = system.Materializer())
-            {
-                var source = StreamConverters.FromInputStream(() => stream);
-                var seqSink = Sink.Seq<ModuleLogMessage>();
-                IRunnableGraph<Task<IImmutableList<ModuleLogMessage>>> graph = source
-                    .Via(FramingFlow)
-                    .Select(b => b.Slice(8))
-                    .Select(b => ToLogMessage(module, b))
-                    .ToMaterialized(seqSink, Keep.Right);
+            var source = StreamConverters.FromInputStream(() => stream);
+            var seqSink = Sink.Seq<ModuleLogMessage>();
+            IRunnableGraph<Task<IImmutableList<ModuleLogMessage>>> graph = source
+                .Via(FramingFlow)
+                .Select(b => b.Slice(8))
+                .Select(b => ToLogMessage(module, b))
+                .ToMaterialized(seqSink, Keep.Right);
 
-                IImmutableList<ModuleLogMessage> result = await graph.Run(materializer);
-                return result;
-            }
+            IImmutableList<ModuleLogMessage> result = await graph.Run(this.materializer);
+            return result;
+        }
+
+        Stream FilterLogsToStream(string module, Stream stream)
+        {
+            var source = StreamConverters.FromInputStream(() => stream);
+            var streamSink = StreamConverters.AsInputStream();
+            IRunnableGraph<Stream> graph = source
+                .Via(FramingFlow)
+                .Select(b => b.Slice(8))
+                .Select(b => ToLogMessage(module, b))
+                .Select(JsonConvert.SerializeObject)
+                .Select(ByteString.FromString)
+                .ToMaterialized(streamSink, Keep.Right);
+
+           Stream filteredStream = graph.Run(this.materializer);
+            return filteredStream;
         }
 
         static ModuleLogMessage ToLogMessage(string module, ByteString arg)
@@ -112,6 +132,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             }
 
             return (6, null);
-        }        
+        }
+
+        public void Dispose()
+        {
+            this.system?.Dispose();
+            this.materializer?.Dispose();
+        }
     }
 }
