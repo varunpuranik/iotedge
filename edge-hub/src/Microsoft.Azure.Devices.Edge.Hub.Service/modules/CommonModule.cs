@@ -131,7 +131,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
                                 logger.LogInformation($"Created persistent store at {this.storagePath}");
                                 return dbStoreprovider;
                             }
-                            catch (Exception ex) when (!ExceptionEx.IsFatal(ex))
+                            catch (Exception ex) when (!ex.IsFatal())
                             {
                                 logger.LogError(ex, "Error creating RocksDB store. Falling back to in-memory store.");
                                 return new InMemoryDbStoreProvider();
@@ -139,7 +139,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
                         }
                         else
                         {
-                            logger.LogInformation($"Using in-memory store");
+                            logger.LogInformation("Using in-memory store");
                             return new InMemoryDbStoreProvider();
                         }
                     })
@@ -252,12 +252,10 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
                     async c =>
                     {
                         IAuthenticator tokenAuthenticator;
-                        IAuthenticator certificateAuthenticator;
-                        IDeviceScopeIdentitiesCache deviceScopeIdentitiesCache;
                         var credentialsCacheTask = c.Resolve<Task<ICredentialsCache>>();
                         // by default regardless of how the authenticationMode, X.509 certificate validation will always be scoped
-                        deviceScopeIdentitiesCache = await c.Resolve<Task<IDeviceScopeIdentitiesCache>>();
-                        certificateAuthenticator = new DeviceScopeCertificateAuthenticator(deviceScopeIdentitiesCache, new NullAuthenticator(), this.trustBundle, true);
+                        var deviceScopeIdentitiesCache = await c.Resolve<Task<IDeviceScopeIdentitiesCache>>();
+                        IAuthenticator certificateAuthenticator = new DeviceScopeCertificateAuthenticator(deviceScopeIdentitiesCache, new NullAuthenticator(), this.trustBundle, true);
                         switch (this.authenticationMode)
                         {
                             case AuthenticationMode.Cloud:
