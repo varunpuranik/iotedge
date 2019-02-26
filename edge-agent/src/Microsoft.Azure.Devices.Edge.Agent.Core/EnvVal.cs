@@ -20,7 +20,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
         [JsonConverter(typeof(OptionConverter<string>))]
         public Option<string> Value { get; }
 
-        [JsonProperty("secretValue")]
+        [JsonProperty("secretKeyRef")]
         [JsonConverter(typeof(OptionConverter<string>))]
         public Option<string> SecretValue { get; }
 

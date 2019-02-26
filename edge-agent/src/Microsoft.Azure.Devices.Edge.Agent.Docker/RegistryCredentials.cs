@@ -27,7 +27,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Docker
         [JsonConverter(typeof(OptionConverter<string>))]
         public Option<string> Password { get; }
 
-        [JsonProperty(PropertyName = "secretPassword")]
+        [JsonProperty(PropertyName = "passwordKeyRef")]
         [JsonConverter(typeof(OptionConverter<string>))]
         public Option<string> SecretPassword { get; }
 
