@@ -70,7 +70,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
             Dictionary<string, string> dockerLoggingOptions;
             IEnumerable<AuthConfig> dockerAuthConfig;
             int configRefreshFrequencySecs;
-            string aadTokenProvider;
+            string aadTokenProviderUrl;
 
             try
             {
@@ -87,7 +87,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
                 dockerLoggingOptions = configuration.GetSection("DockerLoggingOptions").Get<Dictionary<string, string>>() ?? new Dictionary<string, string>();
                 dockerAuthConfig = configuration.GetSection("DockerRegistryAuth").Get<List<AuthConfig>>() ?? new List<AuthConfig>();
                 configRefreshFrequencySecs = configuration.GetValue("ConfigRefreshFrequencySecs", 3600);
-                aadTokenProvider = configuration.GetValue("AadTokenProvider", string.Empty);
+                aadTokenProviderUrl = configuration.GetValue("AadTokenProvider", string.Empty);
             }
             catch (Exception ex)
             {
@@ -153,6 +153,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
             (CancellationTokenSource cts, ManualResetEventSlim completed, Option<object> handler)
                 = ShutdownHandler.Init(ShutdownWaitPeriod, logger);
 
+            //var sp = container.Resolve<ISecretsProvider>();
+            //string secret = await sp.GetSecret("https://kvhack.vault.azure.net/secrets/testsecret");
+
             int returnCode;
             using (IConfigSource unused = await container.Resolve<Task<IConfigSource>>())
             {
@@ -167,6 +170,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
                         try
                         {
                             await agent.ReconcileAsync(cts.Token);
+                            //await Task.CompletedTask;
                         }
                         catch (Exception ex) when (!ex.IsFatal())
                         {
