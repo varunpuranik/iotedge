@@ -5,6 +5,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Docker
     using System.Collections.Generic;
     using System.IO;
     using System.Runtime.InteropServices;
+    using System.Threading.Tasks;
     using global::Docker.DotNet.Models;
     using Microsoft.Azure.Devices.Edge.Agent.Core;
     using Microsoft.Azure.Devices.Edge.Agent.Docker;
@@ -18,15 +19,16 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Docker
 
         public CombinedEdgeletConfigProvider(
             IEnumerable<AuthConfig> authConfigs,
-            IConfigSource configSource)
-            : base(authConfigs)
+            IConfigSource configSource,
+            ISecretsProvider secretsProvider)
+            : base(authConfigs, secretsProvider)
         {
             this.configSource = Preconditions.CheckNotNull(configSource, nameof(configSource));
         }
 
-        public override CombinedDockerConfig GetCombinedConfig(IModule module, IRuntimeInfo runtimeInfo)
+        public override async Task<CombinedDockerConfig> GetCombinedConfig(IModule module, IRuntimeInfo runtimeInfo)
         {
-            CombinedDockerConfig combinedConfig = base.GetCombinedConfig(module, runtimeInfo);
+            CombinedDockerConfig combinedConfig = await base.GetCombinedConfig(module, runtimeInfo);
 
             // if the workload URI is a Unix domain socket then volume mount it into the container
             CreateContainerParameters createOptions = CloneOrCreateParams(combinedConfig.CreateOptions);

@@ -36,22 +36,24 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Commands
 
         public string Id => this.id.Value;
 
-        public static CreateOrUpdateCommand BuildCreate(
+        public static Task<CreateOrUpdateCommand> BuildCreate(
             IModuleManager moduleManager,
             IModule module,
             IModuleIdentity identity,
             IConfigSource configSource,
+            ISecretsProvider secretsProvider,
             object settings) =>
-            Build(moduleManager, module, identity, configSource, settings, Operation.Create);
+            Build(moduleManager, module, identity, configSource, secretsProvider, settings, Operation.Create);
 
-        public static CreateOrUpdateCommand BuildUpdate(
+        public static Task<CreateOrUpdateCommand> BuildUpdate(
             IModuleManager moduleManager,
             IModule module,
             IModuleIdentity identity,
             IConfigSource configSource,
+            ISecretsProvider secretsProvider,
             object settings,
             bool start) =>
-            Build(moduleManager, module, identity, configSource, settings, start ? Operation.UpdateAndStart : Operation.Update);
+            Build(moduleManager, module, identity, configSource, secretsProvider, settings, start ? Operation.UpdateAndStart : Operation.Update);
 
         public Task ExecuteAsync(CancellationToken token)
         {
@@ -90,9 +92,16 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Commands
             return new ModuleSpec(module.Name, module.Type, settings, envVars);
         }
 
-        static IEnumerable<EnvVar> GetEnvVars(IDictionary<string, EnvVal> moduleEnvVars, IModuleIdentity identity, IConfigSource configSource)
+        static async Task<IEnumerable<EnvVar>> GetEnvVars(IDictionary<string, EnvVal> moduleEnvVars, IModuleIdentity identity, IConfigSource configSource,
+            ISecretsProvider secretsProvider)
         {
-            List<EnvVar> envVars = moduleEnvVars.Select(m => new EnvVar(m.Key, m.Value.Value)).ToList();
+            var envVars = new List<EnvVar>();
+            foreach (KeyValuePair<string, EnvVal> envVal in moduleEnvVars)
+            {
+                string envValue = await GetEnvVal(envVal.Value, secretsProvider);
+                string envKey = envVal.Key;
+                envVars.Add(new EnvVar(envKey, envValue));
+            }
 
             // Inject the connection details as an environment variable
             if (identity.Credentials is IdentityProviderServiceCredentials creds)
@@ -181,11 +190,18 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Commands
             return envVars;
         }
 
-        static CreateOrUpdateCommand Build(
+        static Task<string> GetEnvVal(EnvVal envValValue, ISecretsProvider secretsProvider) =>
+            envValValue.Value
+                .Map(Task.FromResult)
+                .GetOrElse(
+                    () => envValValue.SecretValue.Map(secretsProvider.GetSecret).GetOrElse(Task.FromResult(string.Empty)));
+
+        static async Task<CreateOrUpdateCommand> Build(
             IModuleManager moduleManager,
             IModule module,
             IModuleIdentity identity,
             IConfigSource configSource,
+            ISecretsProvider secretsProvider,
             object settings,
             Operation operation)
         {
@@ -195,7 +211,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet.Commands
             Preconditions.CheckNotNull(configSource, nameof(configSource));
             Preconditions.CheckNotNull(settings, nameof(settings));
 
-            IEnumerable<EnvVar> envVars = GetEnvVars(module.Env, identity, configSource);
+            IEnumerable<EnvVar> envVars = await GetEnvVars(module.Env, identity, configSource, secretsProvider);
             ModuleSpec moduleSpec = BuildModuleSpec(module, envVars, settings);
             return new CreateOrUpdateCommand(moduleManager, moduleSpec, operation);
         }

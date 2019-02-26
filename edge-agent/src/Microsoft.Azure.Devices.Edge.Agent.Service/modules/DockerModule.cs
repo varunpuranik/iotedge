@@ -72,7 +72,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                 .SingleInstance();
 
             // ICombinedConfigProvider<CombinedDockerConfig>
-            builder.Register(c => new CombinedDockerConfigProvider(this.dockerAuthConfig))
+            builder.Register(c => new CombinedDockerConfigProvider(this.dockerAuthConfig, c.Resolve<ISecretsProvider>()))
                 .As<ICombinedConfigProvider<CombinedDockerConfig>>()
                 .SingleInstance();
 
@@ -83,8 +83,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                         var dockerClient = c.Resolve<IDockerClient>();
                         var dockerLoggingConfig = c.Resolve<DockerLoggingConfig>();
                         var combinedDockerConfigProvider = c.Resolve<ICombinedConfigProvider<CombinedDockerConfig>>();
+                        var secretsProvider = c.Resolve<ISecretsProvider>();
                         IConfigSource configSource = await c.Resolve<Task<IConfigSource>>();
-                        var dockerFactory = new DockerCommandFactory(dockerClient, dockerLoggingConfig, configSource, combinedDockerConfigProvider);
+                        var dockerFactory = new DockerCommandFactory(dockerClient, dockerLoggingConfig, configSource, combinedDockerConfigProvider, secretsProvider);
                         return new LoggingCommandFactory(dockerFactory, c.Resolve<ILoggerFactory>()) as ICommandFactory;
                     })
                 .As<Task<ICommandFactory>>()

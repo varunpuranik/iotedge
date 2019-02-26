@@ -43,6 +43,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Docker.Commands
             IModuleIdentity identity,
             DockerLoggingConfig defaultDockerLoggerConfig,
             IConfigSource configSource,
+            ISecretsProvider secretsProvider,
             bool buildForEdgeHub)
         {
             // Validate parameters
@@ -50,6 +51,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Docker.Commands
             Preconditions.CheckNotNull(module, nameof(module));
             Preconditions.CheckNotNull(defaultDockerLoggerConfig, nameof(defaultDockerLoggerConfig));
             Preconditions.CheckNotNull(configSource, nameof(configSource));
+            Preconditions.CheckNotNull(secretsProvider, nameof(secretsProvider));
 
             CreateContainerParameters createContainerParameters = module.Config.CreateOptions ?? new CreateContainerParameters();
 
@@ -71,7 +73,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Docker.Commands
             InjectConfig(createContainerParameters, identity, buildForEdgeHub, configSource);
             InjectPortBindings(createContainerParameters, buildForEdgeHub);
             InjectLoggerConfig(createContainerParameters, defaultDockerLoggerConfig, dockerRuntimeInfo.Map(r => r.Config.LoggingOptions));
-            InjectModuleEnvVars(createContainerParameters, module.Env);
+            await InjectModuleEnvVars(createContainerParameters, module.Env, secretsProvider);
             // Inject required Edge parameters
             InjectLabels(createContainerParameters, module, createOptionsString);
 
@@ -261,18 +263,27 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Docker.Commands
             InjectEnvVars(createContainerParameters, varsList);
         }
 
-        static void InjectModuleEnvVars(
+        static async Task InjectModuleEnvVars(
             CreateContainerParameters createContainerParameters,
-            IDictionary<string, EnvVal> moduleEnvVars)
+            IDictionary<string, EnvVal> moduleEnvVars,
+            ISecretsProvider secretsProvider)
         {
             var envVars = new List<string>();
             foreach (KeyValuePair<string, EnvVal> envVar in moduleEnvVars)
             {
-                envVars.Add($"{envVar.Key}={envVar.Value.Value}");
+                string key = envVar.Key;
+                string value = await GetEnvVal(envVar.Value, secretsProvider);
+                envVars.Add($"{key}={value}");
             }
 
             InjectEnvVars(createContainerParameters, envVars);
         }
+
+        static Task<string> GetEnvVal(EnvVal envValValue, ISecretsProvider secretsProvider) =>
+            envValValue.Value
+                .Map(Task.FromResult)
+                .GetOrElse(
+                    () => envValValue.SecretValue.Map(secretsProvider.GetSecret).GetOrElse(Task.FromResult(string.Empty)));
 
         static void InjectEnvVars(
             CreateContainerParameters createContainerParameters,

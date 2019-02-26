@@ -14,13 +14,16 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Docker
         readonly DockerLoggingConfig dockerLoggerConfig;
         readonly IConfigSource configSource;
         readonly ICombinedConfigProvider<CombinedDockerConfig> combinedConfigProvider;
+        readonly ISecretsProvider secretsProvider;
 
-        public DockerCommandFactory(IDockerClient dockerClient, DockerLoggingConfig dockerLoggingConfig, IConfigSource configSource, ICombinedConfigProvider<CombinedDockerConfig> combinedConfigProvider)
+        public DockerCommandFactory(IDockerClient dockerClient, DockerLoggingConfig dockerLoggingConfig, IConfigSource configSource, ICombinedConfigProvider<CombinedDockerConfig> combinedConfigProvider,
+            ISecretsProvider secretsProvider)
         {
             this.client = Preconditions.CheckNotNull(dockerClient, nameof(dockerClient));
             this.dockerLoggerConfig = Preconditions.CheckNotNull(dockerLoggingConfig, nameof(dockerLoggingConfig));
             this.configSource = Preconditions.CheckNotNull(configSource, nameof(configSource));
             this.combinedConfigProvider = Preconditions.CheckNotNull(combinedConfigProvider, nameof(combinedConfigProvider));
+            this.secretsProvider = Preconditions.CheckNotNull(secretsProvider, nameof(secretsProvider));
         }
 
         public Task<ICommand> UpdateEdgeAgentAsync(IModuleWithIdentity module, IRuntimeInfo runtimeInfo) => Task.FromResult(NullCommand.Instance as ICommand);
@@ -29,10 +32,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Docker
         {
             if (module.Module is DockerModule dockerModule)
             {
-                CombinedDockerConfig combinedDockerConfig = this.combinedConfigProvider.GetCombinedConfig(dockerModule, runtimeInfo);
+                CombinedDockerConfig combinedDockerConfig = await this.combinedConfigProvider.GetCombinedConfig(dockerModule, runtimeInfo);
                 return new GroupCommand(
                     new PullCommand(this.client, combinedDockerConfig),
-                    await CreateCommand.BuildAsync(this.client, dockerModule, module.ModuleIdentity, this.dockerLoggerConfig, this.configSource, module.Module is EdgeHubDockerModule));
+                    await CreateCommand.BuildAsync(this.client, dockerModule, module.ModuleIdentity, this.dockerLoggerConfig, this.configSource, this.secretsProvider, module.Module is EdgeHubDockerModule));
             }
 
             return NullCommand.Instance;
@@ -42,12 +45,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Docker
         {
             if (current is DockerModule currentDockerModule && next.Module is DockerModule nextDockerModule)
             {
-                CombinedDockerConfig combinedDockerConfig = this.combinedConfigProvider.GetCombinedConfig(nextDockerModule, runtimeInfo);
+                CombinedDockerConfig combinedDockerConfig = await this.combinedConfigProvider.GetCombinedConfig(nextDockerModule, runtimeInfo);
                 return new GroupCommand(
                     new PullCommand(this.client, combinedDockerConfig),
                     new StopCommand(this.client, currentDockerModule),
                     new RemoveCommand(this.client, currentDockerModule),
-                    await CreateCommand.BuildAsync(this.client, nextDockerModule, next.ModuleIdentity, this.dockerLoggerConfig, this.configSource, next.Module is EdgeHubDockerModule));
+                    await CreateCommand.BuildAsync(this.client, nextDockerModule, next.ModuleIdentity, this.dockerLoggerConfig, this.configSource, this.secretsProvider, next.Module is EdgeHubDockerModule));
             }
 
             return NullCommand.Instance;

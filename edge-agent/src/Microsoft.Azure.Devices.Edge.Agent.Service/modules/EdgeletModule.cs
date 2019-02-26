@@ -82,8 +82,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
             builder.Register(
                     async c =>
                     {
+                        var secretsProvider = c.Resolve<ISecretsProvider>();
                         IConfigSource configSource = await c.Resolve<Task<IConfigSource>>();
-                        return new CombinedEdgeletConfigProvider(this.dockerAuthConfig, configSource) as ICombinedConfigProvider<CombinedDockerConfig>;
+                        return new CombinedEdgeletConfigProvider(this.dockerAuthConfig, configSource, secretsProvider) as ICombinedConfigProvider<CombinedDockerConfig>;
                     })
                 .As<Task<ICombinedConfigProvider<CombinedDockerConfig>>>()
                 .SingleInstance();
@@ -93,9 +94,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                     async c =>
                     {
                         var moduleManager = c.Resolve<IModuleManager>();
+                        var secretsProvider = c.Resolve<ISecretsProvider>();
                         ICombinedConfigProvider<CombinedDockerConfig> combinedDockerConfigProvider = await c.Resolve<Task<ICombinedConfigProvider<CombinedDockerConfig>>>();
                         IConfigSource configSource = await c.Resolve<Task<IConfigSource>>();
-                        var edgeletCommandFactory = new EdgeletCommandFactory<CombinedDockerConfig>(moduleManager, configSource, combinedDockerConfigProvider);
+                        var edgeletCommandFactory = new EdgeletCommandFactory<CombinedDockerConfig>(moduleManager, configSource, combinedDockerConfigProvider, secretsProvider);
                         return new LoggingCommandFactory(edgeletCommandFactory, c.Resolve<ILoggerFactory>()) as ICommandFactory;
                     })
                 .As<Task<ICommandFactory>>()

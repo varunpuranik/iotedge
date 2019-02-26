@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft. All rights reserved.
 namespace Microsoft.Azure.Devices.Edge.Agent.Core
 {
+    using System.Threading.Tasks;
+
     /// <summary>
     /// An implementation of this is expected to combine the type specific config info from the module and
     /// the runtime info objects and return it.
@@ -10,6 +12,6 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
     /// <typeparam name="T">The type of the combined config object returned</typeparam>
     public interface ICombinedConfigProvider<T>
     {
-        T GetCombinedConfig(IModule module, IRuntimeInfo runtimeInfo);
+        Task<T> GetCombinedConfig(IModule module, IRuntimeInfo runtimeInfo);
     }
 }

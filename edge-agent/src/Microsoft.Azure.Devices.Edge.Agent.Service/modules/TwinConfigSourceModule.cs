@@ -49,6 +49,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                 .As<IEdgeAgentConnection>()
                 .SingleInstance();
 
+            // ISecretsProvider
+            builder.Register(c => new NullSecretsProvider())
+                .As<ISecretsProvider>()
+                .SingleInstance();
+
             // Task<IConfigSource>
             builder.Register(
                     async c =>

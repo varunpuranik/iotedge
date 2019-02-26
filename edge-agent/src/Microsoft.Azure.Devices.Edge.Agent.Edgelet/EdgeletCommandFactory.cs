@@ -12,22 +12,29 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet
         readonly IConfigSource configSource;
         readonly IModuleManager moduleManager;
         readonly ICombinedConfigProvider<T> combinedConfigProvider;
+        readonly ISecretsProvider secretsProvider;
 
-        public EdgeletCommandFactory(IModuleManager moduleManager, IConfigSource configSource, ICombinedConfigProvider<T> combinedConfigProvider)
+        public EdgeletCommandFactory(
+            IModuleManager moduleManager, IConfigSource configSource, ICombinedConfigProvider<T> combinedConfigProvider,
+            ISecretsProvider secretsProvider)
         {
             this.moduleManager = Preconditions.CheckNotNull(moduleManager, nameof(moduleManager));
             this.configSource = Preconditions.CheckNotNull(configSource, nameof(configSource));
             this.combinedConfigProvider = Preconditions.CheckNotNull(combinedConfigProvider, nameof(combinedConfigProvider));
+            this.secretsProvider = Preconditions.CheckNotNull(secretsProvider, nameof(secretsProvider));
         }
 
-        public Task<ICommand> CreateAsync(IModuleWithIdentity module, IRuntimeInfo runtimeInfo) =>
-            Task.FromResult(
-                CreateOrUpdateCommand.BuildCreate(
-                    this.moduleManager,
-                    module.Module,
-                    module.ModuleIdentity,
-                    this.configSource,
-                    this.combinedConfigProvider.GetCombinedConfig(module.Module, runtimeInfo)) as ICommand);
+        public async Task<ICommand> CreateAsync(IModuleWithIdentity module, IRuntimeInfo runtimeInfo)
+        {
+            ICommand createCommand = await CreateOrUpdateCommand.BuildCreate(
+                this.moduleManager,
+                module.Module,
+                module.ModuleIdentity,
+                this.configSource,
+                this.secretsProvider,
+                await this.combinedConfigProvider.GetCombinedConfig(module.Module, runtimeInfo));
+            return createCommand;
+        }
 
         public Task<ICommand> UpdateAsync(IModule current, IModuleWithIdentity next, IRuntimeInfo runtimeInfo) =>
             this.UpdateAsync(Option.Some(current), next, runtimeInfo, false);
@@ -47,17 +54,19 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Edgelet
 
         async Task<ICommand> UpdateAsync(Option<IModule> current, IModuleWithIdentity next, IRuntimeInfo runtimeInfo, bool start)
         {
-            T config = this.combinedConfigProvider.GetCombinedConfig(next.Module, runtimeInfo);
+            T config = await this.combinedConfigProvider.GetCombinedConfig(next.Module, runtimeInfo);
+            ICommand updateCommand = await CreateOrUpdateCommand.BuildUpdate(
+                this.moduleManager,
+                next.Module,
+                next.ModuleIdentity,
+                this.configSource,
+                this.secretsProvider,
+                config,
+                start);
             return new GroupCommand(
                 new PrepareUpdateCommand(this.moduleManager, next.Module, config),
                 await current.Match(c => this.StopAsync(c), () => Task.FromResult<ICommand>(NullCommand.Instance)),
-                CreateOrUpdateCommand.BuildUpdate(
-                    this.moduleManager,
-                    next.Module,
-                    next.ModuleIdentity,
-                    this.configSource,
-                    config,
-                    start) as ICommand);
+                updateCommand);
         }
     }
 }

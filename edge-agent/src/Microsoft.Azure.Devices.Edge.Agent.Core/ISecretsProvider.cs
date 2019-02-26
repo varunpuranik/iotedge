@@ -5,6 +5,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
 
     public interface ISecretsProvider
     {
-        Task<string> GetSecret(string secretName);
+        Task<string> GetSecret(string secretUrl);
+    }
+
+    public class NullSecretsProvider : ISecretsProvider
+    {
+        public Task<string> GetSecret(string secretUrl) => Task.FromResult(string.Empty);
     }
 }
