@@ -4,12 +4,14 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
     using System;
     using System.Net.Http;
     using System.Threading.Tasks;
+    using System.Web;
     using Microsoft.Azure.Devices.Edge.Agent.Core;
     using Microsoft.Azure.Devices.Edge.Util;
     using Newtonsoft.Json.Linq;
 
     public class SecretsProvider : ISecretsProvider
     {
+        const string ApiVersion = @"api-version=2016-10-01";
         readonly IAadTokenProvider aadTokenProvider;
 
         public SecretsProvider(IAadTokenProvider aadTokenProvider)
@@ -23,7 +25,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             using (HttpClient client = new HttpClient())
             {
                 Console.WriteLine($"Getting secret - {secretUrl}");
-                var requestUri = new Uri(secretUrl);
+                var requestUri = new Uri($"{secretUrl}/?{ApiVersion}");
+                
                 var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
                 string token = await this.aadTokenProvider.GetToken();
                 request.Headers.Add("Authorization", $"Bearer {token}");

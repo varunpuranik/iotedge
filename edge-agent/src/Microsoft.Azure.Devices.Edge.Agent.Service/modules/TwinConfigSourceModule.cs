@@ -53,7 +53,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                 .SingleInstance();
 
             // ISecretsProvider
-            builder.Register(c => new SecretsProvider(new AadTokenProvider(this.aadTokenProviderUrl)));
+            builder.Register(c => new SecretsProvider(new AadTokenProvider(this.aadTokenProviderUrl)))
                 .As<ISecretsProvider>()
                 .SingleInstance();
 
