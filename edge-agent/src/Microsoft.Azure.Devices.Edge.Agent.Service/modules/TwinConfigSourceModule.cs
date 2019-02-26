@@ -37,29 +37,28 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
 
         protected override void Load(ContainerBuilder builder)
         {
-            // IModuleLogsProvider
-            builder.Register(async c =>
-                {
-                    IRuntimeInfoProvider runtimeInfoProvider = await c.Resolve<Task<IRuntimeInfoProvider>>();
-                    return new ModuleLogsProvider(runtimeInfoProvider) as IModuleLogsProvider;
-                })
-                .As<Task<IModuleLogsProvider>>()
-                .SingleInstance();
+            //// IModuleLogsProvider
+            //builder.Register(async c =>
+            //    {
+            //        IRuntimeInfoProvider runtimeInfoProvider = await c.Resolve<Task<IRuntimeInfoProvider>>();
+            //        return new ModuleLogsProvider(runtimeInfoProvider) as IModuleLogsProvider;
+            //    })
+            //    .As<Task<IModuleLogsProvider>>()
+            //    .SingleInstance();
 
             // IEdgeAgentConnection
             builder.Register(
-                    async c =>
+                    c =>
                     {
-                        var moduleLogsProviderTask = c.Resolve<Task<IModuleLogsProvider>>();
+                        //var moduleLogsProviderTask = c.Resolve<Task<IModuleLogsProvider>>();
                         var serde = c.Resolve<ISerde<DeploymentConfig>>();
                         var deviceClientprovider = c.Resolve<IModuleClientProvider>();
-                        IModuleLogsProvider moduleLogsProvider = await moduleLogsProviderTask;
+                        //IModuleLogsProvider moduleLogsProvider = await moduleLogsProviderTask;
                         IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(
                             deviceClientprovider,
                             serde,
-                            this.configRefreshFrequency,
-                            new EdgeAgentConnectionLogsManager(moduleLogsProvider));
-                        return edgeAgentConnection;
+                            this.configRefreshFrequency);
+                        return Task.FromResult(edgeAgentConnection);
                     })
                 .As<Task<IEdgeAgentConnection>>()
                 .SingleInstance();
