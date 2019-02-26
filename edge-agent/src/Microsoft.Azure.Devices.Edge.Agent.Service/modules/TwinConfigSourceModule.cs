@@ -7,6 +7,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
     using Autofac;
     using Microsoft.Azure.Devices.Edge.Agent.Core;
     using Microsoft.Azure.Devices.Edge.Agent.Core.ConfigSources;
+    using Microsoft.Azure.Devices.Edge.Agent.Core.Requests;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Serde;
     using Microsoft.Azure.Devices.Edge.Agent.Docker;
     using Microsoft.Azure.Devices.Edge.Agent.IoTHub;
@@ -37,11 +38,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
 
         protected override void Load(ContainerBuilder builder)
         {
-            //// IModuleLogsProvider
-            //builder.Register(async c =>
-            //    {
-            //        IRuntimeInfoProvider runtimeInfoProvider = await c.Resolve<Task<IRuntimeInfoProvider>>();
-            //        return new ModuleLogsProvider(runtimeInfoProvider) as IModuleLogsProvider;
+            // IRequestManager
+            builder.Register(c => new RequestManager())
+                .As<IRequestManager>()
+                .SingleInstance();
+
             //    })
             //    .As<Task<IModuleLogsProvider>>()
             //    .SingleInstance();
@@ -50,14 +51,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
             builder.Register(
                     c =>
                     {
-                        //var moduleLogsProviderTask = c.Resolve<Task<IModuleLogsProvider>>();
+                        var requestManager = c.Resolve<IRequestManager>();
                         var serde = c.Resolve<ISerde<DeploymentConfig>>();
                         var deviceClientprovider = c.Resolve<IModuleClientProvider>();
-                        //IModuleLogsProvider moduleLogsProvider = await moduleLogsProviderTask;
-                        IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(
-                            deviceClientprovider,
-                            serde,
-                            this.configRefreshFrequency);
+                        IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(deviceClientprovider, serde, requestManager, this.configRefreshFrequency);                        
                         return Task.FromResult(edgeAgentConnection);
                     })
                 .As<Task<IEdgeAgentConnection>>()
