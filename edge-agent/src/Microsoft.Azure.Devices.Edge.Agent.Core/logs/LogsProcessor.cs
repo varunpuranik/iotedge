@@ -5,11 +5,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
     using System.Collections;
     using System.Collections.Generic;
     using System.IO;
+    using System.IO.Compression;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Util;
 
-    public class EnvironmentLogs : ILogsProcessor
+    class EnvironmentLogs : ILogsProcessor
     {
         readonly IRuntimeInfoProvider runtimeInfoProvider;
 
@@ -18,7 +19,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             this.runtimeInfoProvider = runtimeInfoProvider;
         }
 
-        Task<Stream> ILogsProcessor.GetLogs(LogsRequest logsRequest, CancellationToken cancellationToken)
+        public Task<Stream> GetLogsAsStream(LogsRequest logsRequest, CancellationToken cancellationToken)
         { 
             string module = logsRequest.Id;
             bool follow = logsRequest.Follow;
@@ -26,14 +27,45 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             return this.runtimeInfoProvider.GetModuleLogs(module, follow, tail, cancellationToken);
         }
 
-        async Task<IEnumerable<ModuleLogMessage>> ILogsProcessor.GetLogs(LogsRequest logsRequest) => throw new System.NotImplementedException();
+        public Task<IEnumerable<ModuleLogMessage>> GetLogs(LogsRequest logsRequest, CancellationToken cancellationToken) => throw new System.NotImplementedException();
     }
 
-    public interface ILogsProcessor
+    interface ILogsProcessor
     {
-        Task<Stream> GetLogs(LogsRequest logsRequest);
+        Task<Stream> GetLogsAsStream(LogsRequest logsRequest, CancellationToken cancellationToken);
 
-        Task<IEnumerable<ModuleLogMessage>> GetLogs(LogsRequest logsRequest);
+        Task<IEnumerable<ModuleLogMessage>> GetLogs(LogsRequest logsRequest, CancellationToken cancellationToken);
+    }
+
+    class LogsCompressor : ILogsProcessor
+    {
+        readonly ILogsProcessor logsProcessor;
+
+        public LogsCompressor(ILogsProcessor logsProcessor)
+        {
+            this.logsProcessor = Preconditions.CheckNotNull(logsProcessor, nameof(logsProcessor));
+        }
+
+        public async Task<Stream> GetLogsAsStream(LogsRequest logsRequest, CancellationToken cancellationToken)
+        {
+            Stream stream = await this.logsProcessor.GetLogsAsStream(logsRequest, cancellationToken);
+            switch (logsRequest.Compression)
+            {
+                case CompressionFormat.GZip:
+                    var compressionStream = new GZipStream(stream, CompressionMode.Compress);
+                    return compressionStream;
+
+                case CompressionFormat.Deflate:
+                    var deflateStream = new DeflateStream(stream, CompressionMode.Compress);
+                    return deflateStream;
+
+                default:
+                    return stream;
+            }
+        }
+
+        public Task<IEnumerable<ModuleLogMessage>> GetLogs(LogsRequest logsRequest, CancellationToken cancellationToken)
+            => this.logsProcessor.GetLogs(logsRequest, cancellationToken);
     }
 
     class LogsRequest
@@ -41,8 +73,15 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
         public string Id { get; }
         public bool Follow { get; }
         public LogsFilter LogsFilter { get; }
-        public bool Compress { get; }
+        public CompressionFormat Compression { get; }
         public string Format { get; }
+    }
+
+    enum CompressionFormat
+    {
+        None,
+        GZip,
+        Deflate
     }
 
     class LogsFilter
