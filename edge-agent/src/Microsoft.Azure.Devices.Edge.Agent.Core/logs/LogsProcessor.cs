@@ -30,7 +30,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
         public Task<IEnumerable<ModuleLogMessage>> GetLogs(LogsRequest logsRequest, CancellationToken cancellationToken) => throw new System.NotImplementedException();
     }
 
-    interface ILogsProcessor
+    public interface ILogsProcessor
     {
         Task<Stream> GetLogsAsStream(LogsRequest logsRequest, CancellationToken cancellationToken);
 
@@ -68,24 +68,47 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             => this.logsProcessor.GetLogs(logsRequest, cancellationToken);
     }
 
-    class LogsRequest
+    public class LogsRequest
     {
+        public LogsRequest(string id, bool follow, CompressionFormat compression, LogsFormat format, LogsFilter logsFilter)
+        {
+            this.Id = Preconditions.CheckNonWhiteSpace(id, nameof(id));
+            this.Follow = follow;
+            this.Compression = compression;
+            this.Format = format;
+            this.LogsFilter = Preconditions.CheckNotNull(logsFilter, nameof(logsFilter));
+        }
+
         public string Id { get; }
         public bool Follow { get; }
         public LogsFilter LogsFilter { get; }
         public CompressionFormat Compression { get; }
-        public string Format { get; }
+        public LogsFormat Format { get; }
     }
 
-    enum CompressionFormat
+    public enum LogsFormat
+    {
+        Text,
+        Json
+    }
+
+    public enum CompressionFormat
     {
         None,
         GZip,
         Deflate
     }
 
-    class LogsFilter
+    public class LogsFilter
     {
+        public LogsFilter(int? tail, DateTime? since, int? logLevel, string filterRegex)
+        {
+            this.Tail = tail.HasValue ? Option.Some(tail.Value) : Option.None<int>();
+            this.Since = since.HasValue ? Option.Some(since.Value) : Option.None<DateTime>();
+            this.LogLevel = logLevel.HasValue ? Option.Some(logLevel.Value) : Option.None<int>();
+            this.FilterRegex = Option.Maybe(filterRegex);
+        }
+
         public Option<int> Tail { get; }
         public Option<DateTime> Since { get; }
         public Option<int> LogLevel { get; }
