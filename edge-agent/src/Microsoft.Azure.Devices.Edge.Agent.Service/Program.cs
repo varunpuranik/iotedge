@@ -70,6 +70,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
             Dictionary<string, string> dockerLoggingOptions;
             IEnumerable<AuthConfig> dockerAuthConfig;
             int configRefreshFrequencySecs;
+            string aadTokenProvider;
 
             try
             {
@@ -86,6 +87,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
                 dockerLoggingOptions = configuration.GetSection("DockerLoggingOptions").Get<Dictionary<string, string>>() ?? new Dictionary<string, string>();
                 dockerAuthConfig = configuration.GetSection("DockerRegistryAuth").Get<List<AuthConfig>>() ?? new List<AuthConfig>();
                 configRefreshFrequencySecs = configuration.GetValue("ConfigRefreshFrequencySecs", 3600);
+                aadTokenProvider = configuration.GetValue("AadTokenProvider", string.Empty);
             }
             catch (Exception ex)
             {
@@ -129,7 +131,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
                 switch (configSourceConfig.ToLowerInvariant())
                 {
                     case "twin":
-                        builder.RegisterModule(new TwinConfigSourceModule(backupConfigFilePath, configuration, versionInfo, TimeSpan.FromSeconds(configRefreshFrequencySecs)));
+                        builder.RegisterModule(new TwinConfigSourceModule(backupConfigFilePath, configuration, versionInfo, TimeSpan.FromSeconds(configRefreshFrequencySecs), aadTokenProviderUrl));
                         break;
 
                     case "local":

@@ -22,17 +22,20 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
         readonly IConfiguration configuration;
         readonly VersionInfo versionInfo;
         readonly TimeSpan configRefreshFrequency;
+        readonly string aadTokenProviderUrl;
 
         public TwinConfigSourceModule(
             string backupConfigFilePath,
             IConfiguration config,
             VersionInfo versionInfo,
-            TimeSpan configRefreshFrequency)
+            TimeSpan configRefreshFrequency,
+            string aadTokenProviderUrl)
         {
             this.backupConfigFilePath = Preconditions.CheckNonWhiteSpace(backupConfigFilePath, nameof(backupConfigFilePath));
             this.configuration = Preconditions.CheckNotNull(config, nameof(config));
             this.versionInfo = Preconditions.CheckNotNull(versionInfo, nameof(versionInfo));
             this.configRefreshFrequency = configRefreshFrequency;
+            this.aadTokenProviderUrl = Preconditions.CheckNonWhiteSpace(aadTokenProviderUrl, nameof(aadTokenProviderUrl));
         }
 
         protected override void Load(ContainerBuilder builder)
@@ -50,7 +53,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                 .SingleInstance();
 
             // ISecretsProvider
-            builder.Register(c => new NullSecretsProvider())
+            builder.Register(c => new SecretsProvider(new AadTokenProvider(this.aadTokenProviderUrl)));
                 .As<ISecretsProvider>()
                 .SingleInstance();
 
