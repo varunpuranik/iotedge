@@ -7,6 +7,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
     using Autofac;
     using Microsoft.Azure.Devices.Edge.Agent.Core;
     using Microsoft.Azure.Devices.Edge.Agent.Core.ConfigSources;
+    using Microsoft.Azure.Devices.Edge.Agent.Core.Logs;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Requests;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Serde;
     using Microsoft.Azure.Devices.Edge.Agent.Docker;
@@ -23,29 +24,55 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
         readonly IConfiguration configuration;
         readonly VersionInfo versionInfo;
         readonly TimeSpan configRefreshFrequency;
+        readonly string iotHubHostName;
+        readonly string deviceId;
 
         public TwinConfigSourceModule(
             string backupConfigFilePath,
             IConfiguration config,
             VersionInfo versionInfo,
-            TimeSpan configRefreshFrequency)
+            TimeSpan configRefreshFrequency,
+            string iotHubHostName,
+            string deviceId)
         {
             this.backupConfigFilePath = Preconditions.CheckNonWhiteSpace(backupConfigFilePath, nameof(backupConfigFilePath));
             this.configuration = Preconditions.CheckNotNull(config, nameof(config));
             this.versionInfo = Preconditions.CheckNotNull(versionInfo, nameof(versionInfo));
             this.configRefreshFrequency = configRefreshFrequency;
+            this.iotHubHostName = iotHubHostName;
+            this.deviceId = deviceId;
         }
 
         protected override void Load(ContainerBuilder builder)
         {
-            // IRequestManager
-            builder.Register(c => new RequestManager())
-                .As<IRequestManager>()
+            // ILogsUploader
+            builder.Register(c => new AzureBlobUploader(this.iotHubHostName, this.deviceId))
+                .As<ILogsUploader>()
                 .SingleInstance();
 
-            //    })
-            //    .As<Task<IModuleLogsProvider>>()
-            //    .SingleInstance();
+            builder.Register(
+                    async c =>
+                    {
+                        var runtimeInfoProvider = await c.Resolve<Task<IRuntimeInfoProvider>>();
+                        var environmentLogsProvider = new EnvironmentLogs(runtimeInfoProvider);
+                        var filterLogsProvider = new LogsFilterProcessor(environmentLogsProvider, this.iotHubHostName, this.deviceId);
+                        var logsCompressionProvider = new LogsCompressor(filterLogsProvider);
+                        return logsCompressionProvider;
+                    })
+                .As<Task<ILogsProcessor>>()
+                .SingleInstance();
+
+            // IRequestManager
+            builder.Register(async c =>
+                {
+                    var logsUploader = c.Resolve<ILogsUploader>();
+                    var logsProcessor = await c.Resolve<Task<ILogsProcessor>>();
+                    IRequestHandler pingRequestHandler = new PingRequestHandler();
+                    IRequestHandler logsUploadHandler = new LogsUploadRequestHandler(logsUploader, logsProcessor);
+                    return new RequestManager(new[] { pingRequestHandler, logsUploadHandler });
+                })
+                .As<Task<IRequestManager>>()
+                .SingleInstance();
 
             // IEdgeAgentConnection
             builder.Register(
@@ -54,7 +81,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                         var requestManager = c.Resolve<IRequestManager>();
                         var serde = c.Resolve<ISerde<DeploymentConfig>>();
                         var deviceClientprovider = c.Resolve<IModuleClientProvider>();
-                        IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(deviceClientprovider, serde, requestManager, this.configRefreshFrequency);                        
+                        IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(deviceClientprovider, serde, requestManager, this.configRefreshFrequency);
                         return Task.FromResult(edgeAgentConnection);
                     })
                 .As<Task<IEdgeAgentConnection>>()

@@ -3,8 +3,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
 {
     using System.Threading.Tasks;
 
-    class PingRequestHandler : RequestHandlerBase<object, object>
+    public class PingRequestHandler : RequestHandlerBase<object, object>
     {
+        public PingRequestHandler()
+            : base("ping")
+        { }
+
         protected override Task<object> HandleRequestInternal(object payload)
             => Task.FromResult(default(object));
 

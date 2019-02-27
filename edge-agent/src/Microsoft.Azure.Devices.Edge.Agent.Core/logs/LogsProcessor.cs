@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Util;
 
-    class EnvironmentLogs : ILogsProcessor
+    public class EnvironmentLogs : ILogsProcessor
     {
         readonly IRuntimeInfoProvider runtimeInfoProvider;
 
@@ -37,7 +37,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
         Task<IEnumerable<ModuleLogMessage>> GetLogs(LogsRequest logsRequest, CancellationToken cancellationToken);
     }
 
-    class LogsCompressor : ILogsProcessor
+    public class LogsCompressor : ILogsProcessor
     {
         readonly ILogsProcessor logsProcessor;
 

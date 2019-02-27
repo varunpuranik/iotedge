@@ -3,8 +3,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
 {
     using System.Threading.Tasks;
 
-    interface IRequestHandler
+    public interface IRequestHandler
     {
+        string RequestName { get; }
+
         Task<string> HandleRequest(string payloadJson);
     }
 }

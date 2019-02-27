@@ -6,10 +6,17 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
     using Microsoft.Azure.Devices.Edge.Storage;
     using Microsoft.Azure.Devices.Edge.Util;
 
-    abstract class RequestHandlerBase<TU, TV> : IRequestHandler
+    public abstract class RequestHandlerBase<TU, TV> : IRequestHandler
         where TU : class
         where TV : class
     {
+        protected RequestHandlerBase(string requestName)
+        {
+            this.RequestName = requestName;
+        }
+
+        public virtual string RequestName { get; }
+
         public async Task<string> HandleRequest(string payloadJson)
         {
             TU payload = this.ParsePayload(payloadJson);

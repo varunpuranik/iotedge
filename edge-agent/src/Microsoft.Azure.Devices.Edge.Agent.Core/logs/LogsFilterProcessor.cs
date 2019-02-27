@@ -15,7 +15,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
     using Microsoft.Azure.Devices.Edge.Util;
     using Newtonsoft.Json;
 
-    class LogsFilterProcessor : ILogsProcessor
+    public class LogsFilterProcessor : ILogsProcessor
     {
         static readonly Flow<ByteString, ByteString, NotUsed> FramingFlow
             = Framing.LengthField(4, int.MaxValue, 4, ByteOrder.BigEndian);
