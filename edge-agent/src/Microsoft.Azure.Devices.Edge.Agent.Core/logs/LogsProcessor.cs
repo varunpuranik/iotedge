@@ -9,6 +9,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Util;
+    using Newtonsoft.Json;
 
     public class EnvironmentLogs : ILogsProcessor
     {
@@ -68,8 +69,26 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             => this.logsProcessor.GetLogs(logsRequest, cancellationToken);
     }
 
+    //public class LogsRequest
+    //{
+    //    [JsonConstructor]
+    //    public LogsRequest(string id, CompressionFormat compression, LogsFormat format, LogsFilter logsFilter)
+    //    {
+    //        this.Id = Preconditions.CheckNonWhiteSpace(id, nameof(id));
+    //        this.Compression = compression;
+    //        this.Format = format;
+    //        this.LogsFilter = Preconditions.CheckNotNull(logsFilter, nameof(logsFilter));
+    //    }
+
+    //    public string Id { get; }
+    //    public LogsFilter LogsFilter { get; }
+    //    public CompressionFormat Compression { get; }
+    //    public LogsFormat Format { get; }
+    //}
+
     public class LogsRequest
     {
+        [JsonConstructor]
         public LogsRequest(string id, bool follow, CompressionFormat compression, LogsFormat format, LogsFilter logsFilter)
         {
             this.Id = Preconditions.CheckNonWhiteSpace(id, nameof(id));

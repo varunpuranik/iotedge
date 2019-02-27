@@ -31,8 +31,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
     public class LogsUploadRequest : LogsRequest
     {
         [JsonConstructor]
-        public LogsUploadRequest(string id, bool follow, CompressionFormat compression, LogsFormat format, LogsFilter logsFilter, string sasUrl)
-            : base(id, follow, compression, format, logsFilter)
+        public LogsUploadRequest(string id, CompressionFormat compression, LogsFormat format, LogsFilter logsFilter, string sasUrl)
+            : base(id, false, compression, format, logsFilter)
         {
             this.SasUrl = Preconditions.CheckNonWhiteSpace(sasUrl, nameof(sasUrl));
         }

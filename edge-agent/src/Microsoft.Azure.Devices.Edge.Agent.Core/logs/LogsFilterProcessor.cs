@@ -54,7 +54,6 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 
             Stream filteredStream = graph.Run(this.materializer);
             return filteredStream;
-
         }
 
         public async Task<IEnumerable<ModuleLogMessage>> GetLogs(LogsRequest logsRequest, CancellationToken cancellationToken)
