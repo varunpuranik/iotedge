@@ -2,6 +2,7 @@
 namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
 {
     using System;
+    using System.Globalization;
     using System.IO;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Agent.Core;
@@ -33,7 +34,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
         {
             Preconditions.CheckNonWhiteSpace(uri, nameof(uri));
             Preconditions.CheckNonWhiteSpace(module, nameof(module));
-            Preconditions.CheckNotNull(payloadStream, nameof(payloadStream));
+            //Preconditions.CheckNotNull(payloadStream, nameof(payloadStream));
 
             try
             {
@@ -41,13 +42,22 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
                 string blobName = this.GetBlobName(module);
                 var container = new CloudBlobContainer(containerUri);
                 Events.Uploading(blobName, container.Name);
-                await ExecuteWithRetry(
-                    () =>
-                    {
-                        CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
-                        return blob.UploadFromStreamAsync(payloadStream);
-                    },
-                    r => Events.UploadErrorRetrying(blobName, container.Name, r));
+                //using (var ms = new MemoryStream())
+                //{
+                //    await payloadStream.CopyToAsync(ms);
+                //    byte[] bytes = ms.ToArray();
+                    await ExecuteWithRetry(
+                       () =>
+                       {
+                           CloudBlockBlob blob = container.GetBlockBlobReference(blobName);
+                           blob.Properties.ContentEncoding = "gzip";
+                           blob.Properties.ContentType = "application/json";
+                           // payloadStream.Seek(0, SeekOrigin.Begin);
+                           return blob.UploadFromStreamAsync(payloadStream);
+                           //return blob.UploadFromByteArrayAsync(bytes, 0, bytes.Length);
+                       },
+                       r => Events.UploadErrorRetrying(blobName, container.Name, r));
+                //}
                 Events.UploadSuccess(blobName, container.Name);
             }
             catch (Exception e)
@@ -64,7 +74,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             return transientRetryPolicy.ExecuteAsync(func);
         }
 
-        string GetBlobName(string module) => $"{this.iotHubName}/{this.deviceId}/{module}";
+        string GetBlobName(string module) => $"{this.iotHubName}/{this.deviceId}/{module}-{DateTime.UtcNow.ToString("s", CultureInfo.InvariantCulture)}.gz";
 
         class ErrorDetectionStrategy : ITransientErrorDetectionStrategy
         {
