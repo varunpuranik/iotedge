@@ -16,6 +16,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
     using Akka.Streams.Dsl;
     using Akka.Streams.IO;
     using Akka.Streams.Stage;
+    using Microsoft.Azure.Devices.Edge.Storage;
     using Microsoft.Azure.Devices.Edge.Util;
     using Newtonsoft.Json;
 
@@ -42,7 +43,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             this.materializer = this.system.Materializer();
         }
 
-        public async Task<Stream> GetLogsAsStream(LogsRequest logsRequest, CancellationToken cancellationToken)
+        public async Task<Stream> GetLogsAsStream2(LogsRequest logsRequest, CancellationToken cancellationToken)
         {
             var logMessageParser = new LogMessageParser(this.iotHub, this.deviceId, logsRequest.Id);
             Stream stream = await this.innerLogsProcessor.GetLogsAsStream(logsRequest, cancellationToken);
@@ -59,6 +60,24 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 
             Stream outputStream = await graph.Run(this.materializer);
             return outputStream;
+        }
+
+        public async Task<Stream> GetLogsAsStream(LogsRequest logsRequest, CancellationToken cancellationToken)
+        {
+            var logMessageParser = new LogMessageParser(this.iotHub, this.deviceId, logsRequest.Id);
+            Stream stream = await this.innerLogsProcessor.GetLogsAsStream(logsRequest, cancellationToken);
+            var source = StreamConverters.FromInputStream(() => stream);
+            var seqSink = Sink.Seq<ModuleLogMessage>();
+            IRunnableGraph<Task<IImmutableList<ModuleLogMessage>>> graph = source
+                .Via(FramingFlow)
+                //.Select(b => b.Slice(8))
+                .Select(logMessageParser.Parse)
+                .ToMaterialized(seqSink, Keep.Right);
+
+            IImmutableList<ModuleLogMessage> result = await graph.Run(this.materializer);
+            string json = result.ToJson();
+            byte[] outputBytes = json.ToBytes();
+            return new MemoryStream(outputBytes);
         }
 
         public async Task<IEnumerable<ModuleLogMessage>> GetLogs(LogsRequest logsRequest, CancellationToken cancellationToken)
