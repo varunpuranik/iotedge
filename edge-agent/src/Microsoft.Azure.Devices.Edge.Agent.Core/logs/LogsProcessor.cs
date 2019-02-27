@@ -56,8 +56,19 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             switch (logsRequest.Compression)
             {
                 case CompressionFormat.GZip:
-                    var compressionStream = new GZipStream(stream, CompressionMode.Compress);
-                    return compressionStream;
+                    using (var compressedStream = new MemoryStream())
+                    {
+                        using (var gzipStream = new GZipStream(compressedStream, CompressionMode.Compress))
+                        {
+                            byte[] bytes = ReadStream(stream);
+                            gzipStream.Write(bytes, 0, bytes.Length);
+                        }
+
+                        var zippedBytes = compressedStream.ToArray();
+                        return new MemoryStream(zippedBytes);
+                    }
+
+
 
                 case CompressionFormat.Deflate:
                     var deflateStream = new DeflateStream(stream, CompressionMode.Compress);
@@ -65,6 +76,20 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 
                 default:
                     return stream;
+            }
+        }
+
+        static byte[] ReadStream(Stream s)
+        {
+            byte[] buffer = new byte[16 * 1024];
+            using (MemoryStream ms = new MemoryStream())
+            {
+                int read;
+                while ((read = s.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    ms.Write(buffer, 0, read);
+                }
+                return ms.ToArray();
             }
         }
 
