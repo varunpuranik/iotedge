@@ -57,7 +57,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                         var environmentLogsProvider = new EnvironmentLogs(runtimeInfoProvider);
                         var filterLogsProvider = new LogsFilterProcessor(environmentLogsProvider, this.iotHubHostName, this.deviceId);
                         var logsCompressionProvider = new LogsCompressor(filterLogsProvider);
-                        return logsCompressionProvider;
+                        return (ILogsProcessor)logsCompressionProvider;
                     })
                 .As<Task<ILogsProcessor>>()
                 .SingleInstance();
@@ -69,20 +69,21 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
                     var logsProcessor = await c.Resolve<Task<ILogsProcessor>>();
                     IRequestHandler pingRequestHandler = new PingRequestHandler();
                     IRequestHandler logsUploadHandler = new LogsUploadRequestHandler(logsUploader, logsProcessor);
-                    return new RequestManager(new[] { pingRequestHandler, logsUploadHandler });
+                    return new RequestManager(new[] { pingRequestHandler, logsUploadHandler }) as IRequestManager;
                 })
                 .As<Task<IRequestManager>>()
                 .SingleInstance();
 
             // IEdgeAgentConnection
             builder.Register(
-                    c =>
+                    async c =>
                     {
-                        var requestManager = c.Resolve<IRequestManager>();
+                        var requestManagerTask = c.Resolve<Task<IRequestManager>>();
                         var serde = c.Resolve<ISerde<DeploymentConfig>>();
                         var deviceClientprovider = c.Resolve<IModuleClientProvider>();
+                        var requestManager = await requestManagerTask;
                         IEdgeAgentConnection edgeAgentConnection = new EdgeAgentConnection(deviceClientprovider, serde, requestManager, this.configRefreshFrequency);
-                        return Task.FromResult(edgeAgentConnection);
+                        return edgeAgentConnection;
                     })
                 .As<Task<IEdgeAgentConnection>>()
                 .SingleInstance();

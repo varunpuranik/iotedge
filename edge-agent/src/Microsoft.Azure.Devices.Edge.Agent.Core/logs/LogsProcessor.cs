@@ -20,12 +20,15 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             this.runtimeInfoProvider = runtimeInfoProvider;
         }
 
-        public Task<Stream> GetLogsAsStream(LogsRequest logsRequest, CancellationToken cancellationToken)
+        public async Task<Stream> GetLogsAsStream(LogsRequest logsRequest, CancellationToken cancellationToken)
         { 
             string module = logsRequest.Id;
             bool follow = logsRequest.Follow;
             Option<int> tail = logsRequest.LogsFilter.Tail;
-            return this.runtimeInfoProvider.GetModuleLogs(module, follow, tail, cancellationToken);
+            Stream stream = await this.runtimeInfoProvider.GetModuleLogs(module, follow, tail, cancellationToken);
+            //var ms = new MemoryStream();
+            //await stream.CopyToAsync(ms);
+            return stream;
         }
 
         public Task<IEnumerable<ModuleLogMessage>> GetLogs(LogsRequest logsRequest, CancellationToken cancellationToken) => throw new System.NotImplementedException();
@@ -120,6 +123,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 
     public class LogsFilter
     {
+        [JsonConstructor]
         public LogsFilter(int? tail, DateTime? since, int? logLevel, string filterRegex)
         {
             this.Tail = tail.HasValue ? Option.Some(tail.Value) : Option.None<int>();
