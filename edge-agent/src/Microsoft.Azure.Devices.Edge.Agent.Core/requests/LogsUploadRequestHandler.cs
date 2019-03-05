@@ -5,6 +5,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Logs;
+    using Microsoft.Azure.Devices.Edge.Util;
 
     public class LogsUploadRequestHandler : RequestHandlerBase<LogsUploadRequest, object>
     {
@@ -14,8 +15,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
         public LogsUploadRequestHandler(ILogsUploader logsUploader, ILogsProcessor logsProcessor)
             : base("UploadLogs")
         {
-            this.logsProcessor = logsProcessor;
-            this.logsUploader = logsUploader;
+            this.logsProcessor = Preconditions.CheckNotNull(logsProcessor, nameof(logsProcessor));
+            this.logsUploader = Preconditions.CheckNotNull(logsUploader, nameof(logsUploader));
         }
 
         protected override async Task<object> HandleRequestInternal(LogsUploadRequest payload)
@@ -32,6 +33,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
             Stream logsStream = await this.logsProcessor.GetLogsAsStream(payload, CancellationToken.None);
             await this.logsUploader.Upload(payload.SasUrl, payload.Id, logsStream);
             return null;
+        }
+
+        protected override async Task<Option<object>> HandleRequestInternal(Option<LogsUploadRequest> payload)
+        {
+
         }
     }
 }
