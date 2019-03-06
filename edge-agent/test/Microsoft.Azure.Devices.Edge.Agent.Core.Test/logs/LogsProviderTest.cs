@@ -144,15 +144,28 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.logs
             var logsProcessor = new LogsProcessor(new LogMessageParser(iotHub, deviceId));
             var logsProvider = new LogsProvider(runtimeInfoProvider.Object, logsProcessor);
 
-            var logOptions = new ModuleLogOptions(moduleId, LogsContentEncoding.Gzip, LogsContentType.Text);
+            var logOptions = new ModuleLogOptions(moduleId, LogsContentEncoding.Gzip, LogsContentType.Json);
 
             // Act
             byte[] bytes = await logsProvider.GetLogs(logOptions, cancellationToken);
 
             // Assert
             byte[] decompressedBytes = Compression.DecompressFromGzip(bytes);
-            string logsText = Encoding.UTF8.GetString(decompressedBytes);
-            Assert.Equal(expectedLogText, logsText);
+            var logMessages = decompressedBytes.FromBytes<List<ModuleLogMessage>>();
+            Assert.NotNull(logMessages);
+            Assert.Equal(TestLogTexts.Length, logMessages.Count);
+            for (int i = 0; i < logMessages.Count; i++)
+            {
+                ModuleLogMessage logMessage = logMessages[i];
+                (int logLevel, Option<DateTime> timeStamp, string text) = LogMessageParser.ParseLogText(TestLogTexts[i]);
+                Assert.Equal(logLevel, logMessage.LogLevel);
+                Assert.Equal(timeStamp.HasValue, logMessage.TimeStamp.HasValue);
+                Assert.Equal(timeStamp.OrDefault(), logMessage.TimeStamp.OrDefault());
+                Assert.Equal(text, logMessage.Text);
+                Assert.Equal(iotHub, logMessage.IoTHub);
+                Assert.Equal(deviceId, logMessage.DeviceId);
+                Assert.Equal(moduleId, logMessage.ModuleId);
+            }
         }
 
         static byte[] GetDockerLogsStream(IEnumerable<string> logTexts)
