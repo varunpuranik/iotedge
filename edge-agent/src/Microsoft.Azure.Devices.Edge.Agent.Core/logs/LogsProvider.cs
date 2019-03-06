@@ -12,13 +12,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
     {
         readonly IRuntimeInfoProvider runtimeInfoProvider;
         readonly ILogsProcessor logsProcessor;
-        readonly ILogMessageParser logsMessageParser;
 
-        public LogsProvider(IRuntimeInfoProvider runtimeInfoProvider, ILogsProcessor logsProcessor, ILogMessageParser logsMessageParser)
+        public LogsProvider(IRuntimeInfoProvider runtimeInfoProvider, ILogsProcessor logsProcessor)
         {
             this.runtimeInfoProvider = Preconditions.CheckNotNull(runtimeInfoProvider, nameof(runtimeInfoProvider));
             this.logsProcessor = Preconditions.CheckNotNull(logsProcessor, nameof(logsProcessor));
-            this.logsMessageParser = Preconditions.CheckNotNull(logsMessageParser, nameof(logsMessageParser));
         }
 
         public async Task<byte[]> GetLogs(ModuleLogOptions logOptions, CancellationToken cancellationToken)
@@ -45,12 +43,13 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             switch (logOptions.ContentType)
             {
                 case LogsContentType.Json:
-                    IEnumerable<ModuleLogMessage> logMessages = await this.logsProcessor.GetMessages(logsStream, this.logsMessageParser, logOptions.Id);
+                    IEnumerable<ModuleLogMessage> logMessages = await this.logsProcessor.GetMessages(logsStream, logOptions.Id);
                     return logMessages.ToBytes();
 
                 default:
                     IEnumerable<string> logTexts = await this.logsProcessor.GetText(logsStream);
-                    return logTexts.ToBytes();
+                    string logTextString = logTexts.Join(string.Empty);
+                    return logTextString.ToBytes();
             }
         }
     }

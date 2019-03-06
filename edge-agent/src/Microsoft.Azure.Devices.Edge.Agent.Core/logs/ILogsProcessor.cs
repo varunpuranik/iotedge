@@ -7,7 +7,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 
     public interface ILogsProcessor
     {
-        Task<IEnumerable<ModuleLogMessage>> GetMessages(Stream stream, ILogMessageParser logMessageParser, string moduleId);
+        Task<IEnumerable<ModuleLogMessage>> GetMessages(Stream stream, string moduleId);
 
         Task<IEnumerable<string>> GetText(Stream stream);
     }

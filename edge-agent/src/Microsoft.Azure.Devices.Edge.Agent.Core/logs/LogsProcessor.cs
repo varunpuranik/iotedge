@@ -33,24 +33,25 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 
         readonly ActorSystem system;
         readonly ActorMaterializer materializer;
+        readonly ILogMessageParser logMessageParser;
 
-        public LogsProcessor()
+        public LogsProcessor(ILogMessageParser logMessageParser)
         {
+            this.logMessageParser = Preconditions.CheckNotNull(logMessageParser, nameof(logMessageParser));
             this.system = ActorSystem.Create("LogsProcessor");
             this.materializer = this.system.Materializer();
         }
 
-        public async Task<IEnumerable<ModuleLogMessage>> GetMessages(Stream stream, ILogMessageParser logMessageParser, string moduleId)
+        public async Task<IEnumerable<ModuleLogMessage>> GetMessages(Stream stream, string moduleId)
         {
             Preconditions.CheckNotNull(stream, nameof(stream));
-            Preconditions.CheckNotNull(logMessageParser, nameof(logMessageParser));
             Preconditions.CheckNonWhiteSpace(moduleId, nameof(moduleId));
 
             var source = StreamConverters.FromInputStream(() => stream);
             var seqSink = Sink.Seq<ModuleLogMessage>();
             IRunnableGraph<Task<IImmutableList<ModuleLogMessage>>> graph = source
                 .Via(FramingFlow)
-                .Select(b => logMessageParser.Parse(b, moduleId))
+                .Select(b => this.logMessageParser.Parse(b, moduleId))
                 .ToMaterialized(seqSink, Keep.Right);
 
             IImmutableList<ModuleLogMessage> result = await graph.Run(this.materializer);

@@ -8,6 +8,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 
     public class ModuleLogMessage
     {
+        [JsonConstructor]
+        ModuleLogMessage(string iotHub, string deviceId, string moduleId, string stream, int logLevel, DateTime? timeStamp, string text)
+            : this(iotHub, deviceId, moduleId, stream, logLevel, timeStamp.HasValue ? Option.Some(timeStamp.Value) : Option.None<DateTime>(), text)
+        {
+        }
+
         public ModuleLogMessage(string iotHub, string deviceId, string moduleId, string stream, int logLevel, Option<DateTime> timeStamp, string text)
         {
             this.IoTHub = Preconditions.CheckNonWhiteSpace(iotHub, nameof(iotHub));

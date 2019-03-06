@@ -40,7 +40,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.logs
             string iotHub = "foo.azure-devices.net";
             string deviceId = "dev1";
             var logMessageParser = new LogMessageParser(iotHub, deviceId);
-            var logsProcessor = new LogsProcessor();
+            var logsProcessor = new LogsProcessor(logMessageParser);
             var stream = new MemoryStream(TestLogBytes);
 
             // Act
@@ -59,11 +59,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.logs
             string deviceId = "dev1";
             string moduleId = "mod1";
             var logMessageParser = new LogMessageParser(iotHub, deviceId);
-            var logsProcessor = new LogsProcessor();
+            var logsProcessor = new LogsProcessor(logMessageParser);
             var stream = new MemoryStream(TestLogBytes);
 
             // Act
-            IEnumerable<ModuleLogMessage> logMessages = await logsProcessor.GetMessages(stream, logMessageParser, moduleId);
+            IEnumerable<ModuleLogMessage> logMessages = await logsProcessor.GetMessages(stream, moduleId);
 
             // Assert
             Assert.NotNull(logMessages);
