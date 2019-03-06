@@ -15,6 +15,17 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
     using Akka.Streams.Dsl;
     using Microsoft.Azure.Devices.Edge.Util;
 
+    // Processes incoming logs stream and converts to the required format
+    //
+    // Docker format -
+    // Each input payload should contain one frame in Docker format -
+    //    01 00 00 00 00 00 00 1f 52 6f 73 65 73 20 61 72  65 ...
+    //    │  ─────┬── ─────┬─────  R o  s e  s a  r e...
+    //    │       │        │
+    //    └stdout │        │
+    //            │        └─ 0x0000001f = 31 bytes (including the \n at the end)
+    //         unused
+    //
     public class LogsProcessor : ILogsProcessor, IDisposable
     {
         static readonly Flow<ByteString, ByteString, NotUsed> FramingFlow
