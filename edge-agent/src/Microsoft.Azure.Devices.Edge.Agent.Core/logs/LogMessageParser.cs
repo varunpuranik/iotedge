@@ -10,6 +10,9 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 
     public class LogMessageParser : ILogMessageParser
     {
+        const int DefaultLogLevel = 6;
+        const string LogRegexPattern = @"^(<(?<logLevel>\d)>)?\s*((?<timestamp>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}.\d{3}\s[+-]\d{2}:\d{2})\s)?";        
+
         readonly string iotHubName;
         readonly string deviceId;
 
@@ -22,32 +25,45 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
         public ModuleLogMessage Parse(ByteString byteString, string moduleId) =>
             GetLogMessage(byteString, this.iotHubName, this.deviceId, moduleId);
 
-        static ModuleLogMessage GetLogMessage(ByteString arg, string iotHubName, string deviceId, string moduleId)
+        internal static ModuleLogMessage GetLogMessage(ByteString arg, string iotHubName, string deviceId, string moduleId)
         {
             string stream = GetStream(arg[0]);
             ByteString payload = arg.Slice(8);
             string payloadString = payload.ToString(Encoding.UTF8);
-            (int logLevel, DateTime? timeStamp) = ParseLogLine(payloadString);
+            (int logLevel, Option<DateTime> timeStamp) = ParseLogLine(payloadString);
             var moduleLogMessage = new ModuleLogMessage(iotHubName, deviceId, moduleId, stream, logLevel, timeStamp, payloadString);
             return moduleLogMessage;
         }
 
-        static string GetStream(byte streamByte) => streamByte == 1 ? "stdout" : "stderr";
+        internal static string GetStream(byte streamByte) => streamByte == 1 ? "stdout" : "stderr";
 
-        static (int logLevel, DateTime? timeStamp) ParseLogLine(string value)
-        {
-            string regexPattern = @"^\s*(?<timestamp>\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}.\d{3}\s[+-]\d{2}:\d{2})\s";
-            var regex = new Regex(regexPattern);
+        internal static (int logLevel, Option<DateTime> timeStamp) ParseLogLine(string value)
+        {            
+            var regex = new Regex(LogRegexPattern);
             var match = regex.Match(value);
+            int logLevel = DefaultLogLevel;
+            Option<DateTime> timeStamp = Option.None<DateTime>();
             if (match.Success)
-            {
-                Console.WriteLine($"Value = {match.Value}");
-                string timestamp = match.Groups["timestamp"].Value;
-                var dt = DateTime.Parse(timestamp);
-                Console.WriteLine(dt);
+            {                
+                var tsg = match.Groups["timestamp"];
+                if (tsg?.Length > 0)
+                {
+                    string timestamp = match.Groups["timestamp"].Value;
+                    if (DateTime.TryParse(timestamp, out DateTime dt))
+                    {
+                        timeStamp = Option.Some(dt);
+                    }
+                }
+
+                var llg = match.Groups["logLevel"];
+                if (llg?.Length > 0)
+                {
+                    string ll = llg.Value;
+                    int.TryParse(ll, out logLevel);
+                }
             }
 
-            return (6, null);
+            return (logLevel, timeStamp);
         }
     }
 }
