@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
 {
-    using System.IO;
+    using System;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Logs;
@@ -10,34 +10,21 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
     public class LogsUploadRequestHandler : RequestHandlerBase<LogsUploadRequest, object>
     {
         readonly ILogsUploader logsUploader;
-        readonly ILogsProcessor logsProcessor;
+        readonly ILogsProvider logsProvider;
 
-        public LogsUploadRequestHandler(ILogsUploader logsUploader, ILogsProcessor logsProcessor)
-            : base("UploadLogs")
+        public LogsUploadRequestHandler(ILogsUploader logsUploader, ILogsProvider logsProvider)
         {
-            this.logsProcessor = Preconditions.CheckNotNull(logsProcessor, nameof(logsProcessor));
+            this.logsProvider = Preconditions.CheckNotNull(logsProvider, nameof(logsProvider));
             this.logsUploader = Preconditions.CheckNotNull(logsUploader, nameof(logsUploader));
-        }
-
-        protected override async Task<object> HandleRequestInternal(LogsUploadRequest payload)
-        {
-            //Stream logsStream2 = await this.logsProcessor.GetLogsAsStream(payload, CancellationToken.None);
-            //byte[] bytes = new byte[1024];
-            //int count = 0;
-            //while ((count = await logsStream2.ReadAsync(bytes, 0, 1024)) > 0)
-            //{
-            //    string str = System.Text.Encoding.UTF8.GetString(bytes, 0, count);
-            //    System.Console.WriteLine(str);
-            //}
-
-            Stream logsStream = await this.logsProcessor.GetLogsAsStream(payload, CancellationToken.None);
-            await this.logsUploader.Upload(payload.SasUrl, payload.Id, logsStream);
-            return null;
         }
 
         protected override async Task<Option<object>> HandleRequestInternal(Option<LogsUploadRequest> payload)
         {
-
+            LogsUploadRequest logsUploadRequest = payload.Expect(() => new ArgumentException("Valid payload required to process upload logs request"));
+            var moduleLogOptions = new ModuleLogOptions(logsUploadRequest.Id, logsUploadRequest.ContentEncoding, logsUploadRequest.ContentType);
+            byte[] bytes = await this.logsProvider.GetLogs(moduleLogOptions, CancellationToken.None);
+            await this.logsUploader.Upload(logsUploadRequest.SasUrl, logsUploadRequest.Id, bytes, logsUploadRequest.ContentEncoding, logsUploadRequest.ContentType);
+            return Option.None<object>();
         }
     }
 }

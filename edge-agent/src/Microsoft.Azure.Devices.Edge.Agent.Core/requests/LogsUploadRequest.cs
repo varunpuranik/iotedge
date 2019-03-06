@@ -3,9 +3,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
 {
     using Microsoft.Azure.Devices.Edge.Agent.Core.Logs;
     using Microsoft.Azure.Devices.Edge.Util;
+    using Newtonsoft.Json;
 
     public class LogsUploadRequest
     {
+        [JsonConstructor]
         public LogsUploadRequest(string id, LogsContentEncoding compression, LogsContentType format, string sasUrl)
         {
             this.Id = Preconditions.CheckNonWhiteSpace(id, nameof(id));
