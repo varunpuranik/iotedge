@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.logs
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
     using System.Threading.Tasks;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Logs;
     using Microsoft.Azure.Devices.Edge.Util.Test.Common;
@@ -21,14 +23,14 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.logs
             1, 0, 0, 0, 0, 0, 0, 119, 32, 32, 32, 32, 32, 32, 32, 32, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 149, 151, 32, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 149, 151, 226, 150, 136, 226, 150, 136, 226, 149, 151, 32, 32, 32, 226, 150, 136, 226, 150, 136, 226, 149, 151, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 149, 151, 32, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 150, 136, 226, 149, 151, 10
         };
 
-        static readonly List<string> TestLogLines = new List<string>
+        static readonly List<(string rawText, string parsedText, string timestamp)> TestLogLines = new List<(string, string, string)>
         {
-            "[02/08/2019 02:23:22.907 AM] Edge Agent Main()",
-            "2019-02-08 02:23:23.137 +00:00 [INF] - Starting module management agent.",
-            "2019-02-08 02:23:23.320 +00:00 [INF] - Version - 1.0.7-dev.20055162 (9c164f0fa1b6accb47db2874bd1df90f00c5bf38)",
-            "2019-02-08 02:23:23.321 +00:00 [INF] -",
-            "        █████╗ ███████╗██╗   ██╗██████╗ ███████╗",
-            "       ██╔══██╗╚══███╔╝██║   ██║██╔══██╗██╔════╝"           
+            ("[2019-02-08 02:23:22 : Starting Edge Agent\n", "[2019-02-08 02:23:22 : Starting Edge Agent", string.Empty),
+            ("[02/08/2019 02:23:22.907 AM] Edge Agent Main()\n", "[02/08/2019 02:23:22.907 AM] Edge Agent Main()", string.Empty),
+            ("2019-02-08 02:23:23.137 +00:00 [INF] - Starting module management agent.\n", "[INF] - Starting module management agent.", "2019-02-08 02:23:23.137 +00:00"),
+            ("2019-02-08 02:23:23.320 +00:00 [INF] - Version - 1.0.7-dev.20055162 (9c164f0fa1b6accb47db2874bd1df90f00c5bf38)\n", "[INF] - Version - 1.0.7-dev.20055162 (9c164f0fa1b6accb47db2874bd1df90f00c5bf38)", "2019-02-08 02:23:23.320 +00:00"),
+            ("2019-02-08 02:23:23.321 +00:00 [INF] - \n", "[INF] - ", "2019-02-08 02:23:23.321 +00:00"),
+            ("        █████╗ ███████╗██╗   ██╗██████╗ ███████╗\n", "█████╗ ███████╗██╗   ██╗██████╗ ███████╗", string.Empty)
         };
 
         [Fact]
@@ -45,8 +47,41 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.logs
             IEnumerable<string> textLines = await logsProcessor.GetText(stream);
 
             // Assert
-            Assert.NotNull(textLines);
-            Assert.Equal(TestLogLines, textLines);
+            Assert.NotNull(textLines);            
+            Assert.Equal(TestLogLines.Select(l => l.rawText), textLines);
+        }
+
+        [Fact]
+        public async Task GetMessagesTest()
+        {
+            // Arrange
+            string iotHub = "foo.azure-devices.net";
+            string deviceId = "dev1";
+            string moduleId = "mod1";
+            var logMessageParser = new LogMessageParser(iotHub, deviceId);
+            var logsProcessor = new LogsProcessor();
+            var stream = new MemoryStream(TestLogBytes);
+
+            // Act
+            IEnumerable<ModuleLogMessage> logMessages = await logsProcessor.GetMessages(stream, logMessageParser, moduleId);
+
+            // Assert
+            Assert.NotNull(logMessages);
+            List<ModuleLogMessage> logMessagesList = logMessages.ToList();
+            for (int i = 0; i < logMessagesList.Count; i++)
+            {
+                ModuleLogMessage logMessage = logMessagesList[i];
+                Assert.Equal(iotHub, logMessage.IoTHub);
+                Assert.Equal(deviceId, logMessage.DeviceId);
+                Assert.Equal(moduleId, logMessage.ModuleId);
+                Assert.Equal(6, logMessage.LogLevel);
+                Assert.Equal(TestLogLines[i].parsedText, logMessage.Text);
+                Assert.Equal(!string.IsNullOrEmpty(TestLogLines[i].timestamp), logMessage.TimeStamp.HasValue);
+                if (logMessage.TimeStamp.HasValue)
+                {
+                    Assert.Equal(DateTime.Parse(TestLogLines[i].timestamp), logMessage.TimeStamp.OrDefault());
+                }
+            }
         }
     }
 }
