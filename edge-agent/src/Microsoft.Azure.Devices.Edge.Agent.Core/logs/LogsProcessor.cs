@@ -72,6 +72,21 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             return result;
         }
 
+        public async Task ProcessStream(Stream stream, ModuleLogOptions moduleLogOptions, Func<byte[], Task> callback)
+        {
+            Preconditions.CheckNotNull(stream, nameof(stream));
+            var source = StreamConverters.FromInputStream(() => stream);
+            var seqSink = Sink.Seq<string>();
+            IRunnableGraph<Task<IImmutableList<string>>> graph = source
+                .Via(FramingFlow)
+                .Select(b => b.Slice(8))
+                .Select(b => b.ToString(Encoding.UTF8))
+                .ToMaterialized(seqSink, Keep.Right);
+
+            IImmutableList<string> result = await graph.Run(this.materializer);
+            return result;
+        }
+
         public void Dispose()
         {
             this.system?.Dispose();
