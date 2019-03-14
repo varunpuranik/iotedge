@@ -7,6 +7,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
     using Autofac;
     using Microsoft.Azure.Devices.Edge.Agent.Core;
     using Microsoft.Azure.Devices.Edge.Agent.Core.ConfigSources;
+    using Microsoft.Azure.Devices.Edge.Agent.Core.Logs;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Requests;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Serde;
     using Microsoft.Azure.Devices.Edge.Agent.Docker;
@@ -24,13 +25,19 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
         readonly IConfiguration configuration;
         readonly VersionInfo versionInfo;
         readonly TimeSpan configRefreshFrequency;
+        readonly string deviceId;
+        readonly string iotHubHostName;
 
         public TwinConfigSourceModule(
+            string iotHubHostname,
+            string deviceId,
             string backupConfigFilePath,
             IConfiguration config,
             VersionInfo versionInfo,
             TimeSpan configRefreshFrequency)
         {
+            this.iotHubHostName = Preconditions.CheckNonWhiteSpace(iotHubHostname, nameof(iotHubHostname));
+            this.deviceId = Preconditions.CheckNonWhiteSpace(deviceId, nameof(deviceId));
             this.backupConfigFilePath = Preconditions.CheckNonWhiteSpace(backupConfigFilePath, nameof(backupConfigFilePath));
             this.configuration = Preconditions.CheckNotNull(config, nameof(config));
             this.versionInfo = Preconditions.CheckNotNull(versionInfo, nameof(versionInfo));
@@ -39,6 +46,17 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
 
         protected override void Load(ContainerBuilder builder)
         {
+            // Task<ILogsProvider>
+            builder.Register(
+                    async c =>
+                    {
+                        var logsProcessor = new LogsProcessor(new LogMessageParser(this.iotHubHostName, this.deviceId));
+                        IRuntimeInfoProvider runtimeInfoProvider = await c.Resolve<Task<IRuntimeInfoProvider>>();
+                        return new LogsProvider(runtimeInfoProvider, logsProcessor) as ILogsProvider;
+                    })
+                    .As<Task<ILogsProvider>>()
+                    .SingleInstance();
+
             // IRequestManager
             builder.Register(
                     c =>
@@ -56,8 +74,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
             builder.Register(
                     async c =>
                     {
-                        IRuntimeInfoProvider runtimeInfoProvider = await c.Resolve<Task<IRuntimeInfoProvider>>();
-                        var streamRequestHandlerProvider = new StreamRequestHandlerProvider(runtimeInfoProvider);
+                        ILogsProvider logsProvider = await c.Resolve<Task<ILogsProvider>>();
+                        var streamRequestHandlerProvider = new StreamRequestHandlerProvider(logsProvider);
                         return new StreamRequestListener(streamRequestHandlerProvider) as IStreamRequestListener;
                     })
                 .As<Task<IStreamRequestListener>>()
@@ -66,7 +84,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service.Modules
             // IEdgeAgentConnection
             builder.Register(
                     async c =>
-                    {                        
+                    {
                         var requestManager = c.Resolve<IRequestManager>();
                         var serde = c.Resolve<ISerde<DeploymentConfig>>();
                         var deviceClientprovider = c.Resolve<IModuleClientProvider>();
