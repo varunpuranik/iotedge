@@ -29,27 +29,27 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub.Stream
                 Events.RequestData(streamRequest);
 
                 var logOptions = new ModuleLogOptions(streamRequest.Id, streamRequest.Encoding, streamRequest.ContentType, streamRequest.Filter);
-                using (var socketCancellationTokenSource = new CancellationTokenSource())
-                {
-                    Task ProcessLogsFrame(ArraySegment<byte> bytes)
-                    {
-                        if (clientWebSocket.State != WebSocketState.Open)
-                        {
-                            Events.WebSocketNotOpen(streamRequest.Id, clientWebSocket.State);
-                            socketCancellationTokenSource.Cancel();
-                            return Task.CompletedTask;
-                        }
-                        else
-                        {
-                            return clientWebSocket.SendAsync(bytes, WebSocketMessageType.Binary, true, cancellationToken);
-                        }
-                    }
+                var socketCancellationTokenSource = new CancellationTokenSource();
 
-                    using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, socketCancellationTokenSource.Token))
+                Task ProcessLogsFrame(ArraySegment<byte> bytes)
+                {
+                    if (clientWebSocket.State != WebSocketState.Open)
                     {
-                        await this.logsProvider.GetLogsStream(logOptions, ProcessLogsFrame, linkedCts.Token);
+                        Events.WebSocketNotOpen(streamRequest.Id, clientWebSocket.State);
+                        socketCancellationTokenSource.Cancel();
+                        return Task.CompletedTask;
+                    }
+                    else
+                    {
+                        return clientWebSocket.SendAsync(bytes, WebSocketMessageType.Binary, true, cancellationToken);
                     }
                 }
+
+                using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, socketCancellationTokenSource.Token))
+                {
+                    await this.logsProvider.GetLogsStream(logOptions, ProcessLogsFrame, linkedCts.Token);
+                }
+
 
                 Events.StreamingCompleted(streamRequest.Id);
             }

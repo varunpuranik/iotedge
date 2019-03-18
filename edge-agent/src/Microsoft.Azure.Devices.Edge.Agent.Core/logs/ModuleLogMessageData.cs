@@ -21,7 +21,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             string fullText)
             : base(iotHub, deviceId, moduleId, stream, logLevel, timeStamp, text)
         {
-            this.FullText = Preconditions.CheckNonWhiteSpace(fullText, fullText);
+            // Check fullTest for null, as it could be whitespace.
+            this.FullText = Preconditions.CheckNotNull(fullText, fullText);
             this.FullFrame = Preconditions.CheckNotNull(fullFrame, nameof(fullFrame));
         }
 
