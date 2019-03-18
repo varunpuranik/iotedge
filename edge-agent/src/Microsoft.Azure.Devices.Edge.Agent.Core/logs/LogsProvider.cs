@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 {
+    extern alias akka;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -24,7 +25,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
         public async Task<byte[]> GetLogs(ModuleLogOptions logOptions, CancellationToken cancellationToken)
         {
             Preconditions.CheckNotNull(logOptions, nameof(logOptions));
-            Stream logsStream = await this.runtimeInfoProvider.GetModuleLogs(logOptions.Id, false, logOptions.Filter.Tail, Option.None<int>(), cancellationToken);
+            Stream logsStream = await this.runtimeInfoProvider.GetModuleLogs(logOptions.Id, false, logOptions.Filter.Tail, logOptions.Filter.Since, cancellationToken);
             Events.ReceivedStream(logOptions.Id);
 
             byte[] logBytes = await this.GetProcessedLogs(logsStream, logOptions);
@@ -36,21 +37,24 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             Preconditions.CheckNotNull(logOptions, nameof(logOptions));
             Preconditions.CheckNotNull(callback, nameof(callback));
 
-            if (logOptions.ContentEncoding != LogsContentEncoding.None || logOptions.ContentType != LogsContentType.Text)
-            {
-                throw new NotImplementedException();
-            }
-
-            Stream logsStream = await this.runtimeInfoProvider.GetModuleLogs(logOptions.Id, true, Option.None<int>(), cancellationToken);
+            Stream logsStream = await this.runtimeInfoProvider.GetModuleLogs(logOptions.Id, true, logOptions.Filter.Tail, logOptions.Filter.Since, cancellationToken);
             Events.ReceivedStream(logOptions.Id);
 
-            await this.WriteLogsStreamToOutput(logOptions.Id, callback, logsStream, cancellationToken);
+            await (NeedToProcessStream(logOptions)
+                ? this.logsProcessor.ProcessLogsStream(logsStream, logOptions, callback)
+                : this.WriteLogsStreamToOutput(logOptions.Id, callback, logsStream, cancellationToken));
         }
 
         static byte[] ProcessByContentEncoding(byte[] bytes, LogsContentEncoding contentEncoding) =>
             contentEncoding == LogsContentEncoding.Gzip
                 ? Compression.CompressToGzip(bytes)
                 : bytes;
+
+        static bool NeedToProcessStream(ModuleLogOptions logOptions) =>
+            logOptions.Filter.LogLevel.HasValue
+            || logOptions.Filter.Regex.HasValue
+            || logOptions.ContentEncoding != LogsContentEncoding.None
+            || logOptions.ContentType != LogsContentType.Text;
 
         async Task WriteLogsStreamToOutput(string id, Func<ArraySegment<byte>, Task> callback, Stream stream, CancellationToken cancellationToken)
         {

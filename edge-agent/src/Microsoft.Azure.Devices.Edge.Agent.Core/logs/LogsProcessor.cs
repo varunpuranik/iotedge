@@ -14,6 +14,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
     using Akka.Streams;
     using Akka.Streams.Dsl;
     using Akka.Streams.IO;
+    using Microsoft.Azure.Devices.Edge.Storage;
     using Microsoft.Azure.Devices.Edge.Util;
 
     // Processes incoming logs stream and converts to the required format
@@ -83,6 +84,38 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             return result;
         }
 
+        public async Task ProcessLogsStream(Stream stream, ModuleLogOptions logOptions, Func<ArraySegment<byte>, Task> callback)
+        {
+            string id = logOptions.Id;
+            GraphBuilder graphBuilder = GraphBuilder.CreateParsingGraphBuilder(stream, b => this.logMessageParser.Parse(b, id));
+            logOptions.Filter.LogLevel.ForEach(l => graphBuilder.AddFilter(m => m.LogLevel == l));
+            logOptions.Filter.Regex.ForEach(r => graphBuilder.AddFilter(m => r.IsMatch(m.Text)));
+
+            async Task<bool> ConsumerCallback(ArraySegment<byte> a)
+            {
+                await callback(a);
+                return true;
+            }
+
+            ArraySegment<byte> BasicMapper(ModuleLogMessageData l)
+                => logOptions.ContentType == LogsContentType.Text
+                    ? new ArraySegment<byte>(l.FullFrame.ToArray())
+                    : new ArraySegment<byte>(l.ToBytes());
+
+            var mappers = new List<Func<ArraySegment<byte>, ArraySegment<byte>>>();
+            if (logOptions.ContentEncoding == LogsContentEncoding.Gzip)
+            {
+                mappers.Add(m => new ArraySegment<byte>(Compression.CompressToGzip(m.Array)));
+            }
+
+            IRunnableGraph<Task<IOResult>> graph = graphBuilder.GetStreamingGraph(
+                ConsumerCallback,
+                BasicMapper,
+                mappers);
+
+            await graph.Run(this.materializer);
+        }
+
         public void Dispose()
         {
             this.system?.Dispose();
@@ -130,6 +163,23 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
                 return this.parsingGraphSource
                     .Select(mapper)
                     .ToMaterialized(seqSink, Keep.Right);
+            }
+
+            public IRunnableGraph<Task<IOResult>> GetStreamingGraph<T, U>(Func<U, Task<T>> callback, Func<ModuleLogMessageData, U> basicMapper, IList<Func<U, U>> mappers)
+            {
+                Source<U, Task<IOResult>> streamingGraphSource = this.parsingGraphSource
+                    .Select(basicMapper);
+
+                if (mappers?.Count > 0)
+                {
+                    foreach (Func<U, U> mapper in mappers)
+                    {
+                        streamingGraphSource = streamingGraphSource.Select(mapper);
+                    }
+                }
+
+                return streamingGraphSource.SelectAsync(1, callback)
+                    .To(Sink.Ignore<T>());
             }
         }
     }

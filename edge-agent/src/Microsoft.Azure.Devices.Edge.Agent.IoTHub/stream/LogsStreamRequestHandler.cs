@@ -28,7 +28,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub.Stream
                 LogsStreamRequest streamRequest = await this.ReadLogsStreamingRequest(clientWebSocket, cancellationToken);
                 Events.RequestData(streamRequest);
 
-                var logOptions = new ModuleLogOptions(streamRequest.Id, LogsContentEncoding.None, LogsContentType.Text);
+                var logOptions = new ModuleLogOptions(streamRequest.Id, streamRequest.Encoding, streamRequest.ContentType, streamRequest.Filter);
                 using (var socketCancellationTokenSource = new CancellationTokenSource())
                 {
                     Task ProcessLogsFrame(ArraySegment<byte> bytes)
