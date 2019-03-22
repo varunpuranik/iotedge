@@ -36,8 +36,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
             string edgeHubDockerCertPFXPath = configuration.GetValue<string>(Constants.ConfigKey.EdgeHubServerCertificateFile);
             string edgeHubDockerCaChainCertPath = configuration.GetValue<string>(Constants.ConfigKey.EdgeHubServerCAChainCertificateFile);
             string edgeHubConnectionString = configuration.GetValue<string>(Constants.ConfigKey.IotHubConnectionString);
-            edgeHubDockerCertPFXPath = @"e:\dump\server.pfx";
-            edgeHubDockerCaChainCertPath = @"e:\dump\server.pfx";
+
             if (string.IsNullOrEmpty(edgeHubConnectionString))
             {
                 // When connection string is not set it is edged mode as iotedgd is expected to set this.
@@ -83,7 +82,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
                 // If no connection string was set and we use iotedge devdiv style certificates for development
                 List<X509Certificate2> certificateChain = CertificateHelper.GetServerCACertificatesFromFile(edgeHubDockerCaChainCertPath)?.ToList();
                 InstallCertificates(certificateChain);
-                result = new EdgeHubCertificates(new X509Certificate2(edgeHubDockerCertPFXPath, "Test123"), certificateChain, new List<X509Certificate2>());
+                result = new EdgeHubCertificates(new X509Certificate2(edgeHubDockerCertPFXPath), certificateChain, new List<X509Certificate2>());
             }
             else
             {
