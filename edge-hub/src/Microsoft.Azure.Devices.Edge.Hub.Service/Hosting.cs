@@ -52,13 +52,17 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
                                         ClientCertificateMode = certificateMode
                                     });
                             });
+
+                        options.Listen(
+                            !Socket.OSSupportsIPv6 ? IPAddress.Any : IPAddress.IPv6Any,
+                            18085);
                     })
                 .UseSockets()
                 .ConfigureServices(
                     serviceCollection =>
                     {
-                        serviceCollection.AddSingleton<IConfigurationRoot>(configuration);
-                        serviceCollection.AddSingleton<IDependencyManager>(dependencyManager);
+                        serviceCollection.AddSingleton(configuration);
+                        serviceCollection.AddSingleton(dependencyManager);
                     })
                 .ConfigureMetrics(EdgeMetrics.MetricsCollector.OrDefault())
                 .UseMetrics(
