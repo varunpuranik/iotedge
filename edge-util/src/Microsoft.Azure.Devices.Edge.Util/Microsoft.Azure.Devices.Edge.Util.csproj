@@ -22,6 +22,8 @@
 
   <ItemGroup>
     <PackageReference Include="App.Metrics" Version="3.0.0" />
+    <PackageReference Include="App.Metrics.AspNetCore" Version="3.0.0" />
+    <PackageReference Include="App.Metrics.Formatters.Prometheus" Version="3.0.0" />
     <PackageReference Include="App.Metrics.Reporting.InfluxDB" Version="3.0.0" />
     <PackageReference Include="App.Metrics.Reporting.TextFile" Version="3.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
