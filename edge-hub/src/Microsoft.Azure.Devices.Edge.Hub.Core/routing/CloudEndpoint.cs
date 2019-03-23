@@ -2,6 +2,7 @@
 namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.Collections.Immutable;
     using System.IO;
@@ -152,9 +153,10 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
                         Option.None<SendFailureDetails>();
 
                     Events.ProcessingMessages(routingMessages);
-                    foreach (var clientBatch in routingMessageGroups)
+                    IEnumerable<Task<ISinkResult<IRoutingMessage>>> sendTasks = routingMessageGroups.Select(item => this.ProcessClientMessagesAsync(item.Id, item.RoutingMessages));
+                    ISinkResult<IRoutingMessage>[] sinkResults = await Task.WhenAll(sendTasks);
+                    foreach (var res in sinkResults)
                     {
-                        ISinkResult res = await this.ProcessClientMessagesAsync(clientBatch.Id, clientBatch.RoutingMessages);
                         succeeded.AddRange(res.Succeeded);
                         failed.AddRange(res.Failed);
                         invalid.AddRange(res.InvalidDetailsList);
@@ -167,7 +169,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
                         invalid,
                         sendFailureDetails.GetOrElse(null));
                 }
-            }            
+            }
 
             async Task<ISinkResult<IRoutingMessage>> ProcessClientMessagesAsync(string id, List<IRoutingMessage> routingMessages)
             {
@@ -178,7 +180,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
                     Option.None<SendFailureDetails>();
 
                 long maxMessageSize = routingMessages.Select(r => r.Size()).Max();
-                int batchSize = GetBatchSize(this.cloudEndpoint.maxBatchSize, maxMessageSize, 256 * 1024);
+                int batchSize = GetBatchSize(Math.Min(this.cloudEndpoint.maxBatchSize, routingMessages.Count), maxMessageSize, 256 * 1024);
                 foreach (IEnumerable<IRoutingMessage> batch in routingMessages.Batch(batchSize))
                 {
                     ISinkResult res = await this.ProcessAsync(id, batch.ToList());
@@ -199,7 +201,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
             {
                 while (true)
                 {
-                    if (batchSize == 1 || maxMessageSize < messageSize * batchSize)
+                    if (batchSize == 1 || maxMessageSize > messageSize * batchSize)
                     {
                         return batchSize;
                     }

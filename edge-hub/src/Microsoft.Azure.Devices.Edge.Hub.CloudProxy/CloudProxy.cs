@@ -4,6 +4,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -27,6 +28,17 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
         readonly CloudReceiver cloudReceiver;
         readonly ResettableTimer timer;
         readonly bool closeOnIdleTimeout;
+        static int msgCnt = 0;
+        static Timer countTimer = new Timer(PrintMsgCnt, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+
+        static int curMsgCnt = 0;
+        static void PrintMsgCnt(object state)
+        {
+            int msgCntVal = msgCnt;
+            int messagesSent = msgCntVal - curMsgCnt;
+            curMsgCnt = msgCnt;
+            Console.WriteLine($"Messages sent in 1 min - {messagesSent}");
+        }
 
         public CloudProxy(
             IClient client,
@@ -50,7 +62,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
             }
 
             Events.Initialized(this);
-        }
+        }        
 
         public bool IsActive => this.client.IsActive;
 
@@ -125,6 +137,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
             try
             {
                 await this.client.SendEventAsync(message);
+                msgCnt++;
                 Events.SendMessage(this);
             }
             catch (Exception ex)
@@ -138,12 +151,13 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
         public async Task SendMessageBatchAsync(IEnumerable<IMessage> inputMessages)
         {
             IMessageConverter<Message> converter = this.messageConverterProvider.Get<Message>();
-            IEnumerable<Message> messages = Preconditions.CheckNotNull(inputMessages, nameof(inputMessages))
-                .Select(inputMessage => converter.FromMessage(inputMessage));
+            IList<Message> messages = Preconditions.CheckNotNull(inputMessages, nameof(inputMessages))
+                .Select(inputMessage => converter.FromMessage(inputMessage)).ToList();
             this.timer.Reset();
             try
             {
                 await this.client.SendEventBatchAsync(messages);
+                msgCnt += messages.Count;
                 Events.SendMessage(this);
             }
             catch (Exception ex)

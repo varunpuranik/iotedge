@@ -885,26 +885,26 @@ namespace Microsoft.Azure.Devices.Routing.Core.Endpoints.StateMachine
                     return;
                 }
 
-                if (!Routing.PerfCounter.LogEventsProcessed(fsm.Endpoint.IotHubName, fsm.Endpoint.Name, fsm.Endpoint.Type, status, messages.Count, out string error))
-                {
-                    Log.LogError((int)EventIds.CounterFailure, "[LogEventsProcessedCounterFailed] {0}", error);
-                }
+                //if (!Routing.PerfCounter.LogEventsProcessed(fsm.Endpoint.IotHubName, fsm.Endpoint.Name, fsm.Endpoint.Type, status, messages.Count, out string error))
+                //{
+                //    Log.LogError((int)EventIds.CounterFailure, "[LogEventsProcessedCounterFailed] {0}", error);
+                //}
 
-                TimeSpan totalTime = messages.Select(m => m.DequeuedTime).Aggregate(TimeSpan.Zero, (span, time) => span + (fsm.systemTime.UtcNow - time));
-                long averageLatencyInMs = totalTime < TimeSpan.Zero ? 0L : (long)(totalTime.TotalMilliseconds / messages.Count);
+                //TimeSpan totalTime = messages.Select(m => m.DequeuedTime).Aggregate(TimeSpan.Zero, (span, time) => span + (fsm.systemTime.UtcNow - time));
+                //long averageLatencyInMs = totalTime < TimeSpan.Zero ? 0L : (long)(totalTime.TotalMilliseconds / messages.Count);
 
-                if (!Routing.PerfCounter.LogEventProcessingLatency(fsm.Endpoint.IotHubName, fsm.Endpoint.Name, fsm.Endpoint.Type, status, averageLatencyInMs, out error))
-                {
-                    Log.LogError((int)EventIds.CounterFailure, "[LogEventProcessingLatencyCounterFailed] {0}", error);
-                }
+                //if (!Routing.PerfCounter.LogEventProcessingLatency(fsm.Endpoint.IotHubName, fsm.Endpoint.Name, fsm.Endpoint.Type, status, averageLatencyInMs, out error))
+                //{
+                //    Log.LogError((int)EventIds.CounterFailure, "[LogEventProcessingLatencyCounterFailed] {0}", error);
+                //}
 
-                TimeSpan messageE2EProcessingLatencyTotal = messages.Select(m => m.EnqueuedTime).Aggregate(TimeSpan.Zero, (span, time) => span + (fsm.systemTime.UtcNow - time));
-                long averageE2ELatencyInMs = messageE2EProcessingLatencyTotal < TimeSpan.Zero ? 0L : (long)(messageE2EProcessingLatencyTotal.TotalMilliseconds / messages.Count);
+                //TimeSpan messageE2EProcessingLatencyTotal = messages.Select(m => m.EnqueuedTime).Aggregate(TimeSpan.Zero, (span, time) => span + (fsm.systemTime.UtcNow - time));
+                //long averageE2ELatencyInMs = messageE2EProcessingLatencyTotal < TimeSpan.Zero ? 0L : (long)(messageE2EProcessingLatencyTotal.TotalMilliseconds / messages.Count);
 
-                if (!Routing.PerfCounter.LogE2EEventProcessingLatency(fsm.Endpoint.IotHubName, fsm.Endpoint.Name, fsm.Endpoint.Type, status, averageE2ELatencyInMs, out error))
-                {
-                    Log.LogError((int)EventIds.CounterFailure, "[LogE2EEventProcessingLatencyCounterFailed] {0}", error);
-                }
+                //if (!Routing.PerfCounter.LogE2EEventProcessingLatency(fsm.Endpoint.IotHubName, fsm.Endpoint.Name, fsm.Endpoint.Type, status, averageE2ELatencyInMs, out error))
+                //{
+                //    Log.LogError((int)EventIds.CounterFailure, "[LogE2EEventProcessingLatencyCounterFailed] {0}", error);
+                //}
             }
 
             static void SetSuccessfulEgressUserMetricCounter(EndpointExecutorFsm fsm, ICollection<IMessage> messages)
@@ -914,17 +914,17 @@ namespace Microsoft.Azure.Devices.Routing.Core.Endpoints.StateMachine
                     return;
                 }
 
-                foreach (IGrouping<Type, IMessage> group in messages.GroupBy(m => m.MessageSource.GetType()).Where(g => g.Any()))
-                {
-                    int count = group.Count();
-                    Routing.UserMetricLogger.LogEgressMetric(count, fsm.Endpoint.IotHubName, MessageRoutingStatus.Success, count > 0 ? group.First().ToString() : group.Key.Name);
-                }
+                //foreach (IGrouping<Type, IMessage> group in messages.GroupBy(m => m.MessageSource.GetType()).Where(g => g.Any()))
+                //{
+                //    int count = group.Count();
+                //    Routing.UserMetricLogger.LogEgressMetric(count, fsm.Endpoint.IotHubName, MessageRoutingStatus.Success, count > 0 ? group.First().ToString() : group.Key.Name);
+                //}
 
-                // calculate average latency
-                TimeSpan totalTime = messages.Select(m => m.EnqueuedTime).Aggregate(TimeSpan.Zero, (span, time) => span + (fsm.systemTime.UtcNow - time));
-                long averageLatencyInMs = totalTime < TimeSpan.Zero ? 0L : (long)(totalTime.TotalMilliseconds / messages.Count);
+                //// calculate average latency
+                //TimeSpan totalTime = messages.Select(m => m.EnqueuedTime).Aggregate(TimeSpan.Zero, (span, time) => span + (fsm.systemTime.UtcNow - time));
+                //long averageLatencyInMs = totalTime < TimeSpan.Zero ? 0L : (long)(totalTime.TotalMilliseconds / messages.Count);
 
-                fsm.Endpoint.LogUserMetrics(messages.Count, averageLatencyInMs);
+                //fsm.Endpoint.LogUserMetrics(messages.Count, averageLatencyInMs);
             }
 
             static void SetInvalidEgressUserMetricCounter(EndpointExecutorFsm fsm, IEnumerable<IMessage> messages)

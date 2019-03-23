@@ -39,7 +39,7 @@ namespace Microsoft.Azure.Devices.Routing.Core.Endpoints
             this.options = Preconditions.CheckNotNull(options);
             this.machine = new EndpointExecutorFsm(endpoint, checkpointer, config);
             this.messageStore = messageStore;
-            this.sendMessageTask = Task.Run(this.SendMessagesPump);
+            this.sendMessageTask = Task.Run(this.SendMessagesPump2);
         }
 
         public Endpoint Endpoint => this.machine.Endpoint;
@@ -155,6 +155,42 @@ namespace Microsoft.Azure.Devices.Routing.Core.Endpoints
             }
         }
 
+        async Task SendMessagesPump2()
+        {
+            try
+            {
+                Events.StartSendMessagesPump(this);
+                IMessageIterator iterator = this.messageStore.GetMessageIterator(this.Endpoint.Id, this.checkpointer.Offset + 1);
+                var pump = new MessagesPump(iterator);
+                while (!this.cts.IsCancellationRequested)
+                {
+                    try
+                    {
+                        //this.hasMessagesInQueue.WaitOne(this.options.BatchTimeout);
+                        var messages = await pump.GetMessages();
+                        await this.ProcessMessages(messages);
+                        Events.SendMessagesSuccess(this, messages);
+                        Metrics.DrainedCountIncrement(this.Endpoint.Id, messages.Length);
+                        //await Task.Delay(TimeSpan.FromSeconds(1));
+                        // If store has no messages, then reset the hasMessagesInQueue flag.
+                        if (messages.Length == 0)
+                        {
+                            this.hasMessagesInQueue.Reset();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Events.SendMessagesError(this, ex);
+                        // Swallow exception and keep trying.
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Events.SendMessagesPumpFailure(this, ex);
+            }
+        }
+
         async Task ProcessMessages(IMessage[] messages)
         {
             Events.ProcessingMessages(this, messages);
@@ -169,6 +205,58 @@ namespace Microsoft.Azure.Devices.Routing.Core.Endpoints
             {
                 this.cts.Dispose();
                 this.machine.Dispose();
+            }
+        }
+
+        class MessagesPump
+        {
+            IMessageIterator iterator;
+            List<IMessage> messagesList = new List<IMessage>(BatchSize);
+            const int BatchSize = 100;
+            AsyncLock messagesLock = new AsyncLock();
+            AutoResetEvent messagesResetEvent = new AutoResetEvent(true);
+            TimeSpan waitTimeSpan = TimeSpan.FromSeconds(5);
+            Task populateTask;
+
+            public MessagesPump(IMessageIterator iterator)
+            {
+                this.iterator = iterator;
+                this.populateTask = this.PopulatePump();
+            }
+
+            public async Task<IMessage[]> GetMessages()
+            {
+                List<IMessage> currentMessagesList;
+                using (await this.messagesLock.LockAsync())
+                {
+                    currentMessagesList = this.messagesList;
+                    this.messagesList = new List<IMessage>(BatchSize);
+                    this.messagesResetEvent.Set();
+                }
+
+                return currentMessagesList.ToArray();
+            }
+
+            async Task PopulatePump()
+            {
+                while (true)
+                {
+                    this.messagesResetEvent.WaitOne(waitTimeSpan);
+                    while (this.messagesList.Count < BatchSize)
+                    {
+                        int curBatchSize = BatchSize - this.messagesList.Count;
+                        var messages = (await this.iterator.GetNext(curBatchSize)).ToList();
+                        if (!messages.Any())
+                        {
+                            break;
+                        }
+
+                        using (await this.messagesLock.LockAsync())
+                        {
+                            this.messagesList.AddRange(messages);
+                        }
+                    }
+                }
             }
         }
 
