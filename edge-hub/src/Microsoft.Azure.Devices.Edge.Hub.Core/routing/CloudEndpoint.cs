@@ -29,12 +29,19 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
     {
         readonly Func<string, Task<Util.Option<ICloudProxy>>> cloudProxyGetterFunc;
         readonly Core.IMessageConverter<IRoutingMessage> messageConverter;
+        readonly int maxBatchSize;
 
-        public CloudEndpoint(string id, Func<string, Task<Util.Option<ICloudProxy>>> cloudProxyGetterFunc, Core.IMessageConverter<IRoutingMessage> messageConverter)
+        public CloudEndpoint(
+            string id,
+            Func<string, Task<Util.Option<ICloudProxy>>> cloudProxyGetterFunc,
+            Core.IMessageConverter<IRoutingMessage> messageConverter,
+            int maxBatchSize)
             : base(id)
         {
+            Preconditions.CheckArgument(maxBatchSize > 0, "MaxBatchSize should be greater than 0");
             this.cloudProxyGetterFunc = Preconditions.CheckNotNull(cloudProxyGetterFunc);
             this.messageConverter = Preconditions.CheckNotNull(messageConverter);
+            this.maxBatchSize = maxBatchSize;
         }
 
         public override string Type => this.GetType().Name;
@@ -147,7 +154,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
                     Events.ProcessingMessages(routingMessages);
                     foreach (var clientBatch in routingMessageGroups)
                     {
-                        ISinkResult res = await this.ProcessAsync(clientBatch.Id, clientBatch.RoutingMessages);
+                        ISinkResult res = await this.ProcessClientMessagesAsync(clientBatch.Id, clientBatch.RoutingMessages);
                         succeeded.AddRange(res.Succeeded);
                         failed.AddRange(res.Failed);
                         invalid.AddRange(res.InvalidDetailsList);
@@ -159,6 +166,45 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
                         failed,
                         invalid,
                         sendFailureDetails.GetOrElse(null));
+                }
+            }            
+
+            async Task<ISinkResult<IRoutingMessage>> ProcessClientMessagesAsync(string id, List<IRoutingMessage> routingMessages)
+            {
+                var succeeded = new List<IRoutingMessage>();
+                var failed = new List<IRoutingMessage>();
+                var invalid = new List<InvalidDetails<IRoutingMessage>>();
+                Devices.Routing.Core.Util.Option<SendFailureDetails> sendFailureDetails =
+                    Option.None<SendFailureDetails>();
+
+                long maxMessageSize = routingMessages.Select(r => r.Size()).Max();
+                int batchSize = GetBatchSize(this.cloudEndpoint.maxBatchSize, maxMessageSize, 256 * 1024);
+                foreach (IEnumerable<IRoutingMessage> batch in routingMessages.Batch(batchSize))
+                {
+                    ISinkResult res = await this.ProcessAsync(id, batch.ToList());
+                    succeeded.AddRange(res.Succeeded);
+                    failed.AddRange(res.Failed);
+                    invalid.AddRange(res.InvalidDetailsList);
+                    sendFailureDetails = res.SendFailureDetails;
+                }
+
+                return new SinkResult<IRoutingMessage>(
+                    succeeded,
+                    failed,
+                    invalid,
+                    sendFailureDetails.GetOrElse(null));
+            }
+
+            static int GetBatchSize(int batchSize, long messageSize, long maxMessageSize)
+            {
+                while (true)
+                {
+                    if (batchSize == 1 || maxMessageSize < messageSize * batchSize)
+                    {
+                        return batchSize;
+                    }
+
+                    batchSize = batchSize - 1;
                 }
             }
 

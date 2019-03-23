@@ -8,7 +8,6 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
     using App.Metrics;
     using App.Metrics.Counter;
     using App.Metrics.Timer;
-    using Microsoft.Azure.Devices.Edge.Hub.Core.Cloud;
     using Microsoft.Azure.Devices.Edge.Hub.Core.Device;
     using Microsoft.Azure.Devices.Edge.Hub.Core.Identity;
     using Microsoft.Azure.Devices.Edge.Util;
