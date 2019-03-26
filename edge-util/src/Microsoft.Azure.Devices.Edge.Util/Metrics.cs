@@ -27,7 +27,7 @@ namespace Microsoft.Azure.Devices.Edge.Util
 
         static List<Action> Gauges { get; set; }
 
-        public static void BuildMetricsCollector(IConfigurationRoot configuration)
+        public static void BuildMetricsCollector(IConfiguration configuration)
         {
             bool collectMetrics = configuration.GetValue("CollectMetrics", false);
 
@@ -36,7 +36,16 @@ namespace Microsoft.Azure.Devices.Edge.Util
                 IConfiguration metricsConfigurationSection = configuration.GetSection("Metrics");
                 string metricsStoreType = metricsConfigurationSection.GetValue<string>("MetricsStoreType");
 
-                if (metricsStoreType == "influxdb")
+                if (metricsStoreType == "prometheus")
+                {
+                    var metricsCollector = new MetricsBuilder()
+                        .OutputMetrics.AsPrometheusProtobuf()
+                        .OutputMetrics.AsPrometheusPlainText()
+                        .Build();
+                    MetricsCollector = Option.Some(metricsCollector);
+                    StartReporting(metricsCollector);
+                }
+                else if (metricsStoreType == "influxdb")
                 {
                     string metricsDbName = metricsConfigurationSection.GetValue("MetricsDbName", "metricsdatabase");
                     string influxDbUrl = metricsConfigurationSection.GetValue("InfluxDbUrl", "http://influxdb:8086");

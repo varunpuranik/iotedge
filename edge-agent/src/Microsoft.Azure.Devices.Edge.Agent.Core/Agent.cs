@@ -7,6 +7,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using App.Metrics;
+    using App.Metrics.Counter;
+    using App.Metrics.Gauge;
+    using App.Metrics.Timer;
     using Microsoft.Azure.Devices.Edge.Agent.Core.ConfigSources;
     using Microsoft.Azure.Devices.Edge.Agent.Core.Serde;
     using Microsoft.Azure.Devices.Edge.Storage;
@@ -114,6 +118,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
                     {
                         throw exception;
                     }
+
+                    Metrics.SetReportedModulesCount(current);
 
                     DeploymentConfig deploymentConfig = deploymentConfigInfo.DeploymentConfig;
                     if (deploymentConfig != DeploymentConfig.Empty)
@@ -417,6 +423,22 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
             internal static void ErrorDeserializingConfig(Exception ex)
             {
                 Log.LogWarning((int)EventIds.ErrorDeserializingConfig, ex, "There was an error deserializing stored deployment configuration information");
+            }
+        }
+
+        static class Metrics
+        {
+            static readonly GaugeOptions ReportedModulesCountGaugeOptions = new GaugeOptions
+            {
+                Name = "EdgeAgentReportedModulesGauge",
+                MeasurementUnit = Unit.Items
+            };
+
+            public static void SetReportedModulesCount(ModuleSet current)
+            {
+                // Subtract EdgeHub from the list of connected clients
+                int modulesCount = current.Modules.Count;
+                Util.Metrics.SetGauge(ReportedModulesCountGaugeOptions, modulesCount);
             }
         }
     }

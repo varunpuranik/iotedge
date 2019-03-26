@@ -9,6 +9,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
     using System.Threading.Tasks;
     using Autofac;
     using global::Docker.DotNet.Models;
+    using Microsoft.AspNetCore.Hosting;
     using Microsoft.Azure.Devices.Edge.Agent.Core;
     using Microsoft.Azure.Devices.Edge.Agent.Service.Modules;
     using Microsoft.Azure.Devices.Edge.Util;
@@ -43,6 +44,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
 
         public static async Task<int> MainAsync(IConfiguration configuration)
         {
+            Metrics.BuildMetricsCollector(configuration);
+
             // Bring up the logger before anything else so we can log errors ASAP
             ILogger logger = SetupLogger(configuration);
 
@@ -56,8 +59,14 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
 
             LogLogo(logger);
 
-            string mode;
+            Metrics.MetricsCollector.ForEach(
+                m =>
+                {
+                    IWebHost webHost = Hosting.BuildWebHost(m);
+                });
+            
 
+            string mode;
             string configSourceConfig;
             string backupConfigFilePath;
             int maxRestartCount;
