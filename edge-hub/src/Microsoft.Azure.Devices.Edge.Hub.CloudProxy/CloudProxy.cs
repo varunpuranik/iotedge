@@ -28,16 +28,17 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
         readonly CloudReceiver cloudReceiver;
         readonly ResettableTimer timer;
         readonly bool closeOnIdleTimeout;
-        static int msgCnt = 0;
-        static Timer countTimer = new Timer(PrintMsgCnt, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
-        static int curMsgCnt = 0;
+        static Timer countTimer = new Timer(PrintMsgCnt, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        static int msgCnt = 0;
+        static int lastMsgCnt = 0;
+
         static void PrintMsgCnt(object state)
         {
-            int msgCntVal = msgCnt;
-            int messagesSent = msgCntVal - curMsgCnt;
-            curMsgCnt = msgCnt;
-            Console.WriteLine($"Messages sent in 1 min - {messagesSent}");
+            int messagesSent = msgCnt - lastMsgCnt;
+            lastMsgCnt = msgCnt;
+
+            Console.WriteLine($"Messages sent = {msgCnt}, in 1 min - {messagesSent}");
         }
 
         public CloudProxy(
@@ -137,7 +138,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
             try
             {
                 await this.client.SendEventAsync(message);
-                msgCnt++;
+                Interlocked.Increment(ref msgCnt);
                 Events.SendMessage(this);
             }
             catch (Exception ex)
@@ -157,7 +158,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
             try
             {
                 await this.client.SendEventBatchAsync(messages);
-                msgCnt += messages.Count;
+                Interlocked.Add(ref msgCnt, messages.Count);
                 Events.SendMessage(this);
             }
             catch (Exception ex)
