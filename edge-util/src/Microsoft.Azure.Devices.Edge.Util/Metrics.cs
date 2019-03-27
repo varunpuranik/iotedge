@@ -39,7 +39,6 @@ namespace Microsoft.Azure.Devices.Edge.Util
                 if (metricsStoreType == "prometheus")
                 {
                     var metricsCollector = new MetricsBuilder()
-                        .OutputMetrics.AsPrometheusProtobuf()
                         .OutputMetrics.AsPrometheusPlainText()
                         .Build();
                     MetricsCollector = Option.Some(metricsCollector);

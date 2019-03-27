@@ -45,7 +45,6 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
         public static async Task<int> MainAsync(IConfiguration configuration)
         {
             Metrics.BuildMetricsCollector(configuration);
-
             // Bring up the logger before anything else so we can log errors ASAP
             ILogger logger = SetupLogger(configuration);
 
@@ -59,13 +58,13 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Service
 
             LogLogo(logger);
 
-            Metrics.MetricsCollector.ForEach(
+            await Metrics.MetricsCollector.ForEachAsync(
                 m =>
                 {
                     IWebHost webHost = Hosting.BuildWebHost(m);
+                    return webHost.StartAsync();
                 });
             
-
             string mode;
             string configSourceConfig;
             string backupConfigFilePath;
