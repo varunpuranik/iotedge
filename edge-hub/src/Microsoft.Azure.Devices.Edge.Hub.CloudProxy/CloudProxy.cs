@@ -4,6 +4,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Runtime.CompilerServices;
     using System.Text;
     using System.Threading;
     using System.Threading.Tasks;
@@ -27,6 +28,18 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
         readonly CloudReceiver cloudReceiver;
         readonly ResettableTimer timer;
         readonly bool closeOnIdleTimeout;
+
+        static Timer countTimer = new Timer(PrintMsgCnt, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
+        static int msgCnt = 0;
+        static int lastMsgCnt = 0;
+
+        static void PrintMsgCnt(object state)
+        {
+            int messagesSent = msgCnt - lastMsgCnt;
+            lastMsgCnt = msgCnt;
+
+            Console.WriteLine($"Messages sent = {msgCnt}, in 1 min - {messagesSent}");
+        }
 
         public CloudProxy(
             IClient client,
@@ -125,6 +138,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
             try
             {
                 await this.client.SendEventAsync(message);
+                Interlocked.Increment(ref msgCnt);
                 Events.SendMessage(this);
             }
             catch (Exception ex)
@@ -138,12 +152,13 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
         public async Task SendMessageBatchAsync(IEnumerable<IMessage> inputMessages)
         {
             IMessageConverter<Message> converter = this.messageConverterProvider.Get<Message>();
-            IEnumerable<Message> messages = Preconditions.CheckNotNull(inputMessages, nameof(inputMessages))
-                .Select(inputMessage => converter.FromMessage(inputMessage));
+            IList<Message> messages = Preconditions.CheckNotNull(inputMessages, nameof(inputMessages))
+                .Select(inputMessage => converter.FromMessage(inputMessage)).ToList();
             this.timer.Reset();
             try
             {
                 await this.client.SendEventBatchAsync(messages);
+                Interlocked.Add(ref msgCnt, messages.Count);
                 Events.SendMessage(this);
             }
             catch (Exception ex)
