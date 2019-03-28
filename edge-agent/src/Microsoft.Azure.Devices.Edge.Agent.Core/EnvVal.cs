@@ -10,10 +10,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core
     public class EnvVal : IEquatable<EnvVal>
     {
         [JsonConstructor]
-        public EnvVal(string value, string secretValue)
+        public EnvVal(string value, string secretKeyRef)
         {
             this.Value = Option.Maybe(value);
-            this.SecretValue = Option.Maybe(secretValue);
+            this.SecretValue = Option.Maybe(secretKeyRef);
         }
 
         [JsonProperty("value")]

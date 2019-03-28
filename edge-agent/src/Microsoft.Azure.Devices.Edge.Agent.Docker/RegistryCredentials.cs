@@ -9,12 +9,12 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Docker
 
     public class RegistryCredentials : IEquatable<RegistryCredentials>
     {
-        public RegistryCredentials(string address, string username, string password, string secretPassword)
+        public RegistryCredentials(string address, string username, string password, string passwordKeyRef)
         {
             this.Address = Preconditions.CheckNonWhiteSpace(address, nameof(address));
             this.Username = Preconditions.CheckNonWhiteSpace(username, nameof(username));
             this.Password = Option.Maybe(password);
-            this.SecretPassword = Option.Maybe(secretPassword);
+            this.SecretPassword = Option.Maybe(passwordKeyRef);
         }
 
         [JsonProperty(Required = Required.Always, PropertyName = "address")]
