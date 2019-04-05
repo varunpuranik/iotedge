@@ -15,6 +15,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
     [Unit]
     public class LogsProcessorTest
     {
+        const string DefaultStream = "stdout";
+
         static readonly byte[] TestLogBytes =
         {
             1, 0, 0, 0, 0, 0, 0, 43, 91, 50, 48, 49, 57, 45, 48, 50, 45, 48, 56, 32, 48, 50, 58, 50, 51, 58, 50, 50, 32, 58, 32, 83, 116, 97, 114, 116, 105, 110, 103, 32, 69, 100, 103, 101, 32, 65, 103, 101, 110, 116, 10,
@@ -184,7 +186,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             string moduleId = "mod1";
             var logMessageParser = new LogMessageParser(iotHub, deviceId);
             var logsProcessor = new LogsProcessor(logMessageParser);
-            var stream = new MemoryStream(DockerFraming.Frame(TestLogTexts));
+            var stream = new MemoryStream(DockerFrame(TestLogTexts));
             var filter = new ModuleLogFilter(Option.None<int>(), Option.None<int>(), Option.Some(logLevel), Option.None<string>());
 
             // Act
@@ -209,7 +211,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             string moduleId = "mod1";
             var logMessageParser = new LogMessageParser(iotHub, deviceId);
             var logsProcessor = new LogsProcessor(logMessageParser);
-            var stream = new MemoryStream(DockerFraming.Frame(TestLogTexts));
+            var stream = new MemoryStream(DockerFrame(TestLogTexts));
             var filter = new ModuleLogFilter(Option.None<int>(), Option.None<int>(), Option.Some(logLevel), Option.None<string>());
 
             // Act
@@ -237,7 +239,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             string moduleId = "mod1";
             var logMessageParser = new LogMessageParser(iotHub, deviceId);
             var logsProcessor = new LogsProcessor(logMessageParser);
-            var stream = new MemoryStream(DockerFraming.Frame(TestLogTexts));
+            var stream = new MemoryStream(DockerFrame(TestLogTexts));
             var filter = new ModuleLogFilter(Option.None<int>(), Option.None<int>(), Option.Some(logLevel), Option.Some(regex));
 
             // Act
@@ -262,7 +264,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             string moduleId = "mod1";
             var logMessageParser = new LogMessageParser(iotHub, deviceId);
             var logsProcessor = new LogsProcessor(logMessageParser);
-            var stream = new MemoryStream(DockerFraming.Frame(TestLogTexts));
+            var stream = new MemoryStream(DockerFrame(TestLogTexts));
             var filter = new ModuleLogFilter(Option.None<int>(), Option.None<int>(), Option.Some(logLevel), Option.Some(regex));
 
             // Act
@@ -291,7 +293,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             string regex = "Starting";
             var logMessageParser = new LogMessageParser(iotHub, deviceId);
             var logsProcessor = new LogsProcessor(logMessageParser);
-            var stream = new MemoryStream(DockerFraming.Frame(TestLogTexts));
+            var stream = new MemoryStream(DockerFrame(TestLogTexts));
             var filter = new ModuleLogFilter(Option.None<int>(), Option.None<int>(), Option.Some(logLevel), Option.Some(regex));
             var logOptions = new ModuleLogOptions(LogsContentEncoding.None, LogsContentType.Text, filter);
 
@@ -327,7 +329,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             string regex = "Starting";
             var logMessageParser = new LogMessageParser(iotHub, deviceId);
             var logsProcessor = new LogsProcessor(logMessageParser);
-            var stream = new MemoryStream(DockerFraming.Frame(TestLogTexts));
+            var stream = new MemoryStream(DockerFrame(TestLogTexts));
             var filter = new ModuleLogFilter(Option.None<int>(), Option.None<int>(), Option.Some(logLevel), Option.Some(regex));
             var logOptions = new ModuleLogOptions(LogsContentEncoding.None, LogsContentType.Json, filter);
 
@@ -364,7 +366,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             string regex = "Starting";
             var logMessageParser = new LogMessageParser(iotHub, deviceId);
             var logsProcessor = new LogsProcessor(logMessageParser);
-            var stream = new MemoryStream(DockerFraming.Frame(TestLogTexts));
+            var stream = new MemoryStream(DockerFrame(TestLogTexts));
             var filter = new ModuleLogFilter(Option.None<int>(), Option.None<int>(), Option.Some(logLevel), Option.Some(regex));
             var logOptions = new ModuleLogOptions(LogsContentEncoding.Gzip, LogsContentType.Text, filter);
 
@@ -387,6 +389,17 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
                 .ToArray()
                 .FromBytes();
             Assert.Equal(TestLogTexts[0], receivedText);
+        }
+
+        public static byte[] DockerFrame(IEnumerable<string> logTexts)
+        {
+            var outputBytes = new List<byte>();
+            foreach (string text in logTexts)
+            {
+                outputBytes.AddRange(DockerFraming.Frame(DefaultStream, text));
+            }
+
+            return outputBytes.ToArray();
         }
     }
 }

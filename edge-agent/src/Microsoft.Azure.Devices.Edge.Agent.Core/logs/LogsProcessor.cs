@@ -98,7 +98,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
             ArraySegment<byte> BasicMapper(ModuleLogMessageData l)
                 => logOptions.ContentType == LogsContentType.Text
                     ? new ArraySegment<byte>(l.FullFrame.ToArray())
-                    : new ArraySegment<byte>(l.ToBytes());
+                    : DockerFraming.Frame(l.Stream, l.ToJson());
 
             var mappers = new List<Func<ArraySegment<byte>, ArraySegment<byte>>>();
             if (logOptions.ContentEncoding == LogsContentEncoding.Gzip)

@@ -18,6 +18,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
     [Unit]
     public class LogsProviderTest
     {
+        const string DefaultStream = "stdout";
+
         static readonly string[] TestLogTexts =
         {
             "<6> 2019-02-08 02:23:23.137 +00:00 [INF] - Starting an important module.\n",
@@ -52,7 +54,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
 
             var runtimeInfoProvider = new Mock<IRuntimeInfoProvider>();
             runtimeInfoProvider.Setup(r => r.GetModuleLogs(moduleId, false, tail, since, cancellationToken))
-                .ReturnsAsync(new MemoryStream(DockerFraming.Frame(TestLogTexts)));
+                .ReturnsAsync(new MemoryStream(DockerFrame(TestLogTexts)));
 
             var logsProcessor = new LogsProcessor(new LogMessageParser(iotHub, deviceId));
             var logsProvider = new LogsProvider(runtimeInfoProvider.Object, logsProcessor);
@@ -81,7 +83,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
 
             var runtimeInfoProvider = new Mock<IRuntimeInfoProvider>();
             runtimeInfoProvider.Setup(r => r.GetModuleLogs(moduleId, false, tail, since, cancellationToken))
-                .ReturnsAsync(new MemoryStream(DockerFraming.Frame(TestLogTexts)));
+                .ReturnsAsync(new MemoryStream(DockerFrame(TestLogTexts)));
 
             var logsProcessor = new LogsProcessor(new LogMessageParser(iotHub, deviceId));
             var logsProvider = new LogsProvider(runtimeInfoProvider.Object, logsProcessor);
@@ -110,7 +112,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
 
             var runtimeInfoProvider = new Mock<IRuntimeInfoProvider>();
             runtimeInfoProvider.Setup(r => r.GetModuleLogs(moduleId, false, tail, since, cancellationToken))
-                .ReturnsAsync(new MemoryStream(DockerFraming.Frame(TestLogTexts)));
+                .ReturnsAsync(new MemoryStream(DockerFrame(TestLogTexts)));
 
             var logsProcessor = new LogsProcessor(new LogMessageParser(iotHub, deviceId));
             var logsProvider = new LogsProvider(runtimeInfoProvider.Object, logsProcessor);
@@ -151,7 +153,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
 
             var runtimeInfoProvider = new Mock<IRuntimeInfoProvider>();
             runtimeInfoProvider.Setup(r => r.GetModuleLogs(moduleId, false, tail, since, cancellationToken))
-                .ReturnsAsync(new MemoryStream(DockerFraming.Frame(TestLogTexts)));
+                .ReturnsAsync(new MemoryStream(DockerFrame(TestLogTexts)));
 
             var logsProcessor = new LogsProcessor(new LogMessageParser(iotHub, deviceId));
             var logsProvider = new LogsProvider(runtimeInfoProvider.Object, logsProcessor);
@@ -191,7 +193,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             Option<int> since = Option.None<int>();
             CancellationToken cancellationToken = CancellationToken.None;
 
-            byte[] dockerLogsStreamBytes = DockerFraming.Frame(TestLogTexts);
+            byte[] dockerLogsStreamBytes = DockerFrame(TestLogTexts);
             var runtimeInfoProvider = new Mock<IRuntimeInfoProvider>();
             runtimeInfoProvider.Setup(r => r.GetModuleLogs(moduleId, true, tail, since, cancellationToken))
                 .ReturnsAsync(new MemoryStream(dockerLogsStreamBytes));
@@ -230,7 +232,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             Option<int> since = Option.Some(1552887267);
             CancellationToken cancellationToken = CancellationToken.None;
 
-            byte[] dockerLogsStreamBytes = DockerFraming.Frame(TestLogTexts);
+            byte[] dockerLogsStreamBytes = DockerFrame(TestLogTexts);
             var runtimeInfoProvider = new Mock<IRuntimeInfoProvider>();
             runtimeInfoProvider.Setup(r => r.GetModuleLogs(moduleId, true, tail, since, cancellationToken))
                 .ReturnsAsync(new MemoryStream(dockerLogsStreamBytes));
@@ -280,8 +282,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             var filter1 = new ModuleLogFilter(tail, since, Option.Some(6), Option.Some("Starting"));
             var filter2 = new ModuleLogFilter(Option.None<int>(), Option.None<int>(), Option.None<int>(), Option.Some("bad"));
 
-            byte[] dockerLogsStreamBytes1 = DockerFraming.Frame(TestLogTexts);
-            byte[] dockerLogsStreamBytes2 = DockerFraming.Frame(TestLogTexts);
+            byte[] dockerLogsStreamBytes1 = DockerFrame(TestLogTexts);
+            byte[] dockerLogsStreamBytes2 = DockerFrame(TestLogTexts);
 
             var modulesList = new List<ModuleRuntimeInfo>
             {
@@ -348,8 +350,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
 
             var filter = new ModuleLogFilter(tail, since, Option.None<int>(), Option.Some("bad"));
 
-            byte[] dockerLogsStreamBytes1 = DockerFraming.Frame(TestLogTexts);
-            byte[] dockerLogsStreamBytes2 = DockerFraming.Frame(TestLogTexts);
+            byte[] dockerLogsStreamBytes1 = DockerFrame(TestLogTexts);
+            byte[] dockerLogsStreamBytes2 = DockerFrame(TestLogTexts);
 
             var modulesList = new List<ModuleRuntimeInfo>
             {
@@ -526,6 +528,17 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
                 new List<string> { "edgehub", "edgeAgent", "module1", "eandt" },
                 new List<string> { "edgehub", "edgeAgent", "eandt" },
             };
+        }
+
+        public static byte[] DockerFrame(IEnumerable<string> logTexts)
+        {
+            var outputBytes = new List<byte>();
+            foreach (string text in logTexts)
+            {
+                outputBytes.AddRange(DockerFraming.Frame(DefaultStream, text));
+            }
+
+            return outputBytes.ToArray();
         }
     }
 }

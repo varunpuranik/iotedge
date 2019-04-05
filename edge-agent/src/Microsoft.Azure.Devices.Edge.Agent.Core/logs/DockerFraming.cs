@@ -1,38 +1,29 @@
 // Copyright (c) Microsoft. All rights reserved.
-namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
+namespace Microsoft.Azure.Devices.Edge.Agent.Core.Logs
 {
     using System;
     using System.Collections.Generic;
     using System.Text;
 
-    public class DockerFraming
+    public static class DockerFraming
     {
-        public static byte[] Frame(IEnumerable<string> logTexts)
-        {
-            var outputBytes = new List<byte>();
-            foreach (string text in logTexts)
-            {
-                outputBytes.AddRange(Frame(text));
-            }
+        static readonly byte[] Padding = { 0, 0, 0 };
 
-            return outputBytes.ToArray();
-        }
-
-        public static byte[] Frame(string text)
+        public static ArraySegment<byte> Frame(string stream, string text)
         {
-            byte streamByte = 01;
-            var padding = new byte[3];
+            byte streamByte = GetStreamByte(stream);
             var outputBytes = new List<byte>();
             byte[] textBytes = Encoding.UTF8.GetBytes(text);
             byte[] lenBytes = GetLengthBytes(textBytes.Length);
             outputBytes.Add(streamByte);
-            outputBytes.AddRange(padding);
+            outputBytes.AddRange(Padding);
             outputBytes.AddRange(lenBytes);
             outputBytes.AddRange(textBytes);
-            return outputBytes.ToArray();
+            byte[] frameBytes = outputBytes.ToArray();
+            return new ArraySegment<byte>(frameBytes);
         }
 
-        static byte[] GetLengthBytes(int len)
+        internal static byte[] GetLengthBytes(int len)
         {
             byte[] intBytes = BitConverter.GetBytes(len);
             if (BitConverter.IsLittleEndian)
@@ -43,5 +34,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Test.Logs
             byte[] result = intBytes;
             return result;
         }
+
+        internal static byte GetStreamByte(string stream) => (byte)(stream == "stderr" ? 2 : 1);
     }
 }
