@@ -45,6 +45,7 @@ namespace Microsoft.Azure.Devices.Edge.Util
                     StartReporting(metricsCollector);
                 }
                 else if (metricsStoreType == "influxdb")
+                else if (metricsStoreType == "influxdb")
                 {
                     string metricsDbName = metricsConfigurationSection.GetValue("MetricsDbName", "metricsdatabase");
                     string influxDbUrl = metricsConfigurationSection.GetValue("InfluxDbUrl", "http://influxdb:8086");

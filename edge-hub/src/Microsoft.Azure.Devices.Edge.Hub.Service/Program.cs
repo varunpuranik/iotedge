@@ -36,6 +36,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
 
         static async Task<int> MainAsync(IConfigurationRoot configuration)
         {
+            Metrics.BuildMetricsCollector(configuration);
+
             string logLevel = configuration.GetValue($"{Logger.RuntimeLogLevelEnvKey}", "info");
             Logger.SetLogLevel(logLevel);
 
@@ -86,9 +88,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
                 connectionReauthenticator.Init();
             }
 
-            (CancellationTokenSource cts, ManualResetEventSlim completed, Option<object> handler) = ShutdownHandler.Init(ShutdownWaitPeriod, logger);
-
-            Metrics.BuildMetricsCollector(configuration);
+            (CancellationTokenSource cts, ManualResetEventSlim completed, Option<object> handler) = ShutdownHandler.Init(ShutdownWaitPeriod, logger);            
 
             using (IProtocolHead protocolHead = await GetEdgeHubProtocolHeadAsync(logger, configuration, container, hosting))
             using (var renewal = new CertificateRenewal(certificates, logger))
