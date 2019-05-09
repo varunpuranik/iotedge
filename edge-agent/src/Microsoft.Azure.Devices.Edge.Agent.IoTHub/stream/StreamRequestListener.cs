@@ -16,19 +16,21 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub.Stream
         readonly IStreamRequestHandlerProvider streamRequestHandlerProvider;
         readonly SemaphoreSlim streamLock;
         readonly int maxConcurrentStreams;
+        readonly IModuleConnection moduleConnection;
         Task pumpTask;
 
-        public StreamRequestListener(IStreamRequestHandlerProvider streamRequestHandlerProvider, int maxConcurrentStreams = 10)
+        public StreamRequestListener(IStreamRequestHandlerProvider streamRequestHandlerProvider, IEdgeAgentConnection edgeAgentConnection, int maxConcurrentStreams = 10)
         {
             this.streamRequestHandlerProvider = Preconditions.CheckNotNull(streamRequestHandlerProvider, nameof(streamRequestHandlerProvider));
             this.streamLock = new SemaphoreSlim(maxConcurrentStreams);
             this.maxConcurrentStreams = maxConcurrentStreams;
+            this.moduleConnection = Preconditions.CheckNotNull(edgeAgentConnection, nameof(edgeAgentConnection)).ModuleConnection;
         }
 
-        public void InitPump(IModuleClient moduleClient)
+        public void InitPump(IModuleConnection moduleConnection)
         {
             Events.StartingPump();
-            this.pumpTask = this.Pump(moduleClient);
+            this.pumpTask = this.Pump(moduleConnection);
         }
 
         public void Dispose()
@@ -38,13 +40,14 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub.Stream
             // Don't dispose the cts here as it can cause an ObjectDisposedException.
         }
 
-        async Task Pump(IModuleClient moduleClient)
+        async Task Pump(IModuleConnection moduleConnection)
         {
             while (!this.cts.IsCancellationRequested)
             {
                 try
                 {
                     await this.streamLock.WaitAsync(this.cts.Token);
+                    IModuleClient moduleClient = await moduleConnection.GetOrCreateModuleClient();
                     await this.ProcessStreamRequest(moduleClient);
                 }
                 catch (Exception e)
