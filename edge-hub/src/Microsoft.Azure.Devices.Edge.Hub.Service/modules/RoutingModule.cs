@@ -49,6 +49,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
         readonly int maxUpstreamBatchSize;
         readonly int upstreamFanOutFactor;
         readonly bool encryptTwinStore;
+        readonly TimeSpan configUpdateFrequency;
 
         public RoutingModule(
             string iotHubName,
@@ -72,7 +73,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
             bool useV1TwinManager,
             int maxUpstreamBatchSize,
             int upstreamFanOutFactor,
-            bool encryptTwinStore)
+            bool encryptTwinStore,
+            TimeSpan configUpdateFrequency)
         {
             this.iotHubName = Preconditions.CheckNonWhiteSpace(iotHubName, nameof(iotHubName));
             this.edgeDeviceId = Preconditions.CheckNonWhiteSpace(edgeDeviceId, nameof(edgeDeviceId));
@@ -96,6 +98,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
             this.maxUpstreamBatchSize = maxUpstreamBatchSize;
             this.upstreamFanOutFactor = upstreamFanOutFactor;
             this.encryptTwinStore = encryptTwinStore;
+            this.configUpdateFrequency = configUpdateFrequency;
         }
 
         protected override void Load(ContainerBuilder builder)
@@ -492,7 +495,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
                     {
                         IMessageStore messageStore = this.isStoreAndForwardEnabled ? c.Resolve<IMessageStore>() : null;
                         Router router = await c.Resolve<Task<Router>>();
-                        var configUpdater = new ConfigUpdater(router, messageStore);
+                        var configUpdater = new ConfigUpdater(router, messageStore, this.configUpdateFrequency);
                         return configUpdater;
                     })
                 .As<Task<ConfigUpdater>>()
