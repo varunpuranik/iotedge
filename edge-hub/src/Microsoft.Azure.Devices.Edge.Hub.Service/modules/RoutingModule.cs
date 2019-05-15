@@ -50,6 +50,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
         readonly int upstreamFanOutFactor;
         readonly bool encryptTwinStore;
         readonly TimeSpan configUpdateFrequency;
+        readonly bool disableCloudSubscriptions;
 
         public RoutingModule(
             string iotHubName,
@@ -74,7 +75,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
             int maxUpstreamBatchSize,
             int upstreamFanOutFactor,
             bool encryptTwinStore,
-            TimeSpan configUpdateFrequency)
+            TimeSpan configUpdateFrequency,
+            bool disableCloudSubscriptions)
         {
             this.iotHubName = Preconditions.CheckNonWhiteSpace(iotHubName, nameof(iotHubName));
             this.edgeDeviceId = Preconditions.CheckNonWhiteSpace(edgeDeviceId, nameof(edgeDeviceId));
@@ -99,6 +101,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
             this.upstreamFanOutFactor = upstreamFanOutFactor;
             this.encryptTwinStore = encryptTwinStore;
             this.configUpdateFrequency = configUpdateFrequency;
+            this.disableCloudSubscriptions = disableCloudSubscriptions;
         }
 
         protected override void Load(ContainerBuilder builder)
@@ -451,12 +454,19 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service.Modules
             builder.Register(
                     async c =>
                     {
-                        var invokeMethodHandlerTask = c.Resolve<Task<IInvokeMethodHandler>>();
-                        var connectionManagerTask = c.Resolve<Task<IConnectionManager>>();
-                        var deviceConnectivityManager = c.Resolve<IDeviceConnectivityManager>();
-                        IConnectionManager connectionManager = await connectionManagerTask;
-                        IInvokeMethodHandler invokeMethodHandler = await invokeMethodHandlerTask;
-                        return new SubscriptionProcessor(connectionManager, invokeMethodHandler, deviceConnectivityManager) as ISubscriptionProcessor;
+                        if (this.disableCloudSubscriptions)
+                        {
+                            return new NullSubscriptionProcessor() as ISubscriptionProcessor;
+                        }
+                        else
+                        {
+                            var invokeMethodHandlerTask = c.Resolve<Task<IInvokeMethodHandler>>();
+                            var connectionManagerTask = c.Resolve<Task<IConnectionManager>>();
+                            var deviceConnectivityManager = c.Resolve<IDeviceConnectivityManager>();
+                            IConnectionManager connectionManager = await connectionManagerTask;
+                            IInvokeMethodHandler invokeMethodHandler = await invokeMethodHandlerTask;
+                            return new SubscriptionProcessor(connectionManager, invokeMethodHandler, deviceConnectivityManager) as ISubscriptionProcessor;
+                        }
                     })
                 .As<Task<ISubscriptionProcessor>>()
                 .SingleInstance();
