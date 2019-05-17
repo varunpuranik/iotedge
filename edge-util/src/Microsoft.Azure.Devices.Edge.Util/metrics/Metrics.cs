@@ -6,13 +6,13 @@ namespace Microsoft.Azure.Devices.Edge.Util.Metrics
 
     public static class Metrics
     {
-        IMetricsCounter Counter { get; } = new NullMetricsCounter();
+        //IMetricsCounter Counter { get; } = new NullMetricsCounter();
 
-        IMetricsMeter Meter { get; } = new NullMetricsMeter();
+        //IMetricsMeter Meter { get; } = new NullMetricsMeter();
 
-        IMetricsTimer Timer { get; } = new NullMetricsTimer();
+        //IMetricsTimer Timer { get; } = new NullMetricsTimer();
 
-        IMetricsHistogram Histogram { get; } = new NullMetricsHistogram();
+        //IMetricsHistogram Histogram { get; } = new NullMetricsHistogram();
     }
 
     public interface IMetricsCollector
