@@ -136,6 +136,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
             int configUpdateFrequencySecs = this.configuration.GetValue("ConfigRefreshFrequencySecs", 3600);
             TimeSpan configUpdateFrequency = TimeSpan.FromSeconds(configUpdateFrequencySecs);
             bool disableCloudSubscriptions = this.configuration.GetValue("DisableCloudSubscriptions", false);
+            bool enableConnectivityCheck = this.configuration.GetValue("EnableConnectivityCheck", true);
 
             builder.RegisterModule(
                 new RoutingModule(
@@ -162,7 +163,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
                     upstreamFanOutFactor,
                     encryptTwinStore,
                     configUpdateFrequency,
-                    disableCloudSubscriptions));
+                    disableCloudSubscriptions,
+                    enableConnectivityCheck));
         }
 
         void RegisterCommonModule(ContainerBuilder builder, bool optimizeForPerformance, (bool isEnabled, bool usePersistentStorage, StoreAndForwardConfiguration config, string storagePath) storeAndForward)
