@@ -78,6 +78,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
                             }
 
                             this.moduleClient = Option.Some(mc);
+                            Events.InitializedNewModuleClient();
                             return mc;
                         });
                 return moduleClient;
@@ -89,7 +90,10 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             try
             {
                 Events.ModuleClientClosed();
-                await this.InitModuleClient();
+                if (this.enableSubscriptions)
+                {
+                    await this.InitModuleClient();
+                }
             }
             catch (Exception ex)
             {
@@ -109,7 +113,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
                 TimedOutClosing,
                 ErrorClosingClient,
                 ErrorHandlingModuleClosedEvent,
-                ModuleClientClosed
+                ModuleClientClosed,
+                InitializedNewModuleClient
             }
 
             public static void ClosingModuleClient(Exception ex)
@@ -140,6 +145,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.IoTHub
             public static void ModuleClientClosed()
             {
                 Log.LogInformation((int)EventIds.ModuleClientClosed, "Current module client closed. Initializing a new one...");
+            }
+
+            public static void InitializedNewModuleClient()
+            {
+                Log.LogInformation((int)EventIds.InitializedNewModuleClient, "Initialized new module client");
             }
         }
     }
