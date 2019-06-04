@@ -46,8 +46,6 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
                 Routing.LoggerFactory = Logger.Factory;
             }
 
-            Metrics.InitPrometheusMetrics(configuration.GetSection("metrics"));
-
             EdgeHubCertificates certificates = await EdgeHubCertificates.LoadAsync(configuration);
             bool clientCertAuthEnabled = configuration.GetValue(Constants.ConfigKey.EdgeHubClientCertAuthEnabled, false);
             Hosting hosting = Hosting.Initialize(configuration, certificates.ServerCertificate, new DependencyManager(configuration, certificates.ServerCertificate, certificates.TrustBundle), clientCertAuthEnabled);
@@ -59,6 +57,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
             LogVersionInfo(logger);
             logger.LogInformation($"OptimizeForPerformance={configuration.GetValue("OptimizeForPerformance", true)}");
             logger.LogInformation("Loaded server certificate with expiration date of {0}", certificates.ServerCertificate.NotAfter.ToString("o"));
+
+            Metrics.InitPrometheusMetrics(configuration.GetSection("metrics"), logger);
 
             // EdgeHub and CloudConnectionProvider have a circular dependency. So need to Bind the EdgeHub to the CloudConnectionProvider.
             IEdgeHub edgeHub = await container.Resolve<Task<IEdgeHub>>();

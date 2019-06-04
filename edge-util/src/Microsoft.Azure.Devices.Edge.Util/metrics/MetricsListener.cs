@@ -6,6 +6,7 @@ namespace Microsoft.Azure.Devices.Edge.Util.Metrics
     using System.Net;
     using System.Threading;
     using System.Threading.Tasks;
+    using Microsoft.Extensions.Logging;
 
     public class MetricsListener : IDisposable
     {
@@ -13,14 +14,31 @@ namespace Microsoft.Azure.Devices.Edge.Util.Metrics
         readonly CancellationTokenSource cts = new CancellationTokenSource();
         readonly IMetricsProvider metricsProvider;
         readonly Task processTask;
+        readonly ILogger logger;
 
-        public MetricsListener(string url, IMetricsProvider metricsProvider)
+        MetricsListener(HttpListener httpListener, IMetricsProvider metricsProvider, ILogger logger)
         {
-            this.httpListener = new HttpListener();
-            this.httpListener.Prefixes.Add(url);
-            this.httpListener.Start();
-            this.metricsProvider = metricsProvider;
+            this.logger = Preconditions.CheckNotNull(logger, nameof(logger));
+            this.httpListener = httpListener;
+            this.metricsProvider = Preconditions.CheckNotNull(metricsProvider, nameof(metricsProvider));
             this.processTask = this.ProcessRequests();
+        }
+
+        public static MetricsListener Create(string url, IMetricsProvider metricsProvider, ILogger logger)
+        {
+            Preconditions.CheckNonWhiteSpace(url, nameof(url));
+            try
+            {
+                var httpListener = new HttpListener();
+                httpListener.Prefixes.Add(url);
+                httpListener.Start();
+                return new MetricsListener(httpListener, metricsProvider, logger);
+            }
+            catch (Exception e)
+            {
+                logger?.LogError(e, "Error creating metrics listener");
+                throw;
+            }
         }
 
         public void Dispose()
@@ -47,7 +65,7 @@ namespace Microsoft.Azure.Devices.Edge.Util.Metrics
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                this.logger.LogError(e, "Error processing metrics requests");
             }
         }
     }
