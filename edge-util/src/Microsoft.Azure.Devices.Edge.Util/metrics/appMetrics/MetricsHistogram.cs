@@ -10,7 +10,7 @@ namespace Microsoft.Azure.Devices.Edge.Util.Metrics.AppMetrics
         readonly IMeasureHistogramMetrics histogramMetrics;
         readonly HistogramOptions histogramOptions;
 
-        public MetricsHistogram(string name, IMeasureHistogramMetrics histogramMetrics, Dictionary<string, string> defaultTags)
+        public MetricsHistogram(string name, IMeasureHistogramMetrics histogramMetrics, string[] labelNames)
         {
             this.histogramMetrics = histogramMetrics;
             MetricTags defaultMetricsTags = MetricTags.Concat(MetricTags.Empty, defaultTags);

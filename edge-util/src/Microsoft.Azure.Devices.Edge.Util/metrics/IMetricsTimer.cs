@@ -2,11 +2,9 @@
 namespace Microsoft.Azure.Devices.Edge.Util.Metrics
 {
     using System;
-    using System.Collections.Generic;
 
     public interface IMetricsTimer
     {
-        IDisposable GetTimer();
-        IDisposable GetTimer(Dictionary<string, string> tags);
+        IDisposable GetTimer(string[] labelValues);
     }
 }

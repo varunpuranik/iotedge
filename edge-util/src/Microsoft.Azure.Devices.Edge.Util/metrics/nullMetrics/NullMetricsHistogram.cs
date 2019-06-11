@@ -5,11 +5,11 @@ namespace Microsoft.Azure.Devices.Edge.Util.Metrics.NullMetrics
 
     public class NullMetricsHistogram : IMetricsHistogram
     {
-        public void Update(long value)
+        public void Update(double value)
         {
         }
 
-        public void Update(long value, Dictionary<string, string> tags)
+        public void Update(double value, Dictionary<string, string> tags)
         {
         }
     }

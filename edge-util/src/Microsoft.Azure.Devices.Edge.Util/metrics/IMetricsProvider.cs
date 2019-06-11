@@ -1,22 +1,18 @@
 // Copyright (c) Microsoft. All rights reserved.
 namespace Microsoft.Azure.Devices.Edge.Util.Metrics
 {
-    using System.Collections.Generic;
-    using System.Threading;
     using System.Threading.Tasks;
 
     public interface IMetricsProvider
     {
-        IMetricsCounter CreateCounter(string name, Dictionary<string, string> tags);
+        IMetricsCounter CreateCounter(string name, string[] labelNames);
 
-        IMetricsGauge CreateGauge(string name, Dictionary<string, string> defaultTags);
+        IMetricsGauge CreateGauge(string name, string[] labelNames);
 
-        IMetricsMeter CreateMeter(string name, Dictionary<string, string> defaultTags);
+        IMetricsTimer CreateTimer(string name, string[] labelNames);
 
-        IMetricsTimer CreateTimer(string name, Dictionary<string, string> defaultTags);
+        IMetricsHistogram CreateHistogram(string name, string[] labelNames);
 
-        IMetricsHistogram CreateHistogram(string name, Dictionary<string, string> defaultTags);
-
-        Task<byte[]> GetSnapshot(CancellationToken cancellationToken);
+        Task StartListener();
     }
 }
