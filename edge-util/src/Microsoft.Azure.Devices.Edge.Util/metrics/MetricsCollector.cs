@@ -3,8 +3,8 @@ namespace Microsoft.Azure.Devices.Edge.Util.Metrics
 {
     using System;
     using System.Globalization;
-    using Microsoft.Azure.Devices.Edge.Util.Metrics.AppMetrics;
     using Microsoft.Azure.Devices.Edge.Util.Metrics.NullMetrics;
+    using Microsoft.Azure.Devices.Edge.Util.Metrics.Prometheus.Net;
     using Microsoft.Extensions.Configuration;
 
     public class Metrics : IDisposable
@@ -16,7 +16,7 @@ namespace Microsoft.Azure.Devices.Edge.Util.Metrics
         static readonly object StateLock = new object();
         static Option<MetricsListener> metricsListener = Option.None<MetricsListener>();
 
-        public static IMetricsProvider Instance { get; private set; } = new NullMetricsProvider();
+        public static IMetricsProvider Instance { get; private set; }
 
         public static void InitMetricsListener(IConfiguration configuration, string deviceId)
         {
@@ -45,8 +45,8 @@ namespace Microsoft.Azure.Devices.Edge.Util.Metrics
             {
                 if (!metricsListener.HasValue)
                 {
-                    Instance = MetricsProvider.Create(deviceId);
-                    metricsListener = Option.Some(new MetricsListener(prefixUrl, Instance));
+                    Instance = new MetricsProvider();
+                    //metricsListener = Option.Some(new MetricsListener(prefixUrl, Instance));
                 }
             }
         }
