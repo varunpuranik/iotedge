@@ -12,7 +12,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
     using Microsoft.Azure.Devices.Edge.Util;
     using Microsoft.Extensions.Logging;
 
-    public class LogsUploadRequestHandler : RequestHandlerBase<LogsUploadRequest, object>
+    public class LogsUploadRequestHandler : RequestHandlerBase<LogsUploadRequest, TaskStatusResponse>
     {
         static readonly Version ExpectedSchemaVersion = new Version("1.0");
 
@@ -29,7 +29,7 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
 
         public override string RequestName => "UploadLogs";
 
-        protected override async Task<Option<object>> HandleRequestInternal(Option<LogsUploadRequest> payloadOption, CancellationToken cancellationToken)
+        protected override async Task<Option<TaskStatusResponse>> HandleRequestInternal(Option<LogsUploadRequest> payloadOption, CancellationToken cancellationToken)
         {
             LogsUploadRequest payload = payloadOption.Expect(() => new ArgumentException("Request payload not found"));
             if (ExpectedSchemaVersion.CompareMajorVersion(payload.SchemaVersion, "logs upload request schema") != 0)
@@ -47,8 +47,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
                 false);
             IList<(string id, ModuleLogOptions logOptions)> logOptionsList = await requestToOptionsMapper.MapToLogOptions(payload.Items, cancellationToken);
             IEnumerable<Task> uploadLogsTasks = logOptionsList.Select(l => this.UploadLogs(payload.SasUrl, l.id, l.logOptions, cancellationToken));
-            await Task.WhenAll(uploadLogsTasks);
-            return Option.None<object>();
+            (string correlationId, BackgroundTaskStatus status) = BackgroundTask.Run(() => Task.WhenAll(uploadLogsTasks), "upload logs", cancellationToken);
+            return Option.Some(TaskStatusResponse.Create(correlationId, status));
         }
 
         async Task UploadLogs(string sasUrl, string id, ModuleLogOptions moduleLogOptions, CancellationToken token)
@@ -63,6 +63,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
                 Func<ArraySegment<byte>, Task> uploaderCallback = await this.logsUploader.GetUploaderCallback(sasUrl, id, moduleLogOptions.ContentEncoding, moduleLogOptions.ContentType);
                 await this.logsProvider.GetLogsStream(id, moduleLogOptions, uploaderCallback, token);
             }
+
+            Events.UploadLogsFinished(id);
         }
 
         static class Events
@@ -73,7 +75,8 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
             enum EventIds
             {
                 MismatchedMinorVersions = IdStart,
-                ProcessingRequest
+                ProcessingRequest,
+                UploadLogsFinished
             }
 
             public static void MismatchedMinorVersions(string payloadSchemaVersion, Version expectedSchemaVersion)
@@ -84,6 +87,11 @@ namespace Microsoft.Azure.Devices.Edge.Agent.Core.Requests
             public static void ProcessingRequest(LogsUploadRequest payload)
             {
                 Log.LogInformation((int)EventIds.ProcessingRequest, $"Processing request to upload logs for {payload.ToJson()}");
+            }
+
+            public static void UploadLogsFinished(string id)
+            {
+                Log.LogInformation((int)EventIds.UploadLogsFinished, $"Finished uploading logs for module {id}");
             }
         }
     }
