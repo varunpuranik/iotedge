@@ -12,6 +12,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
     using Microsoft.Azure.Devices.Edge.Hub.Core;
     using Microsoft.Azure.Devices.Edge.Hub.Core.Cloud;
     using Microsoft.Azure.Devices.Edge.Util;
+    using Microsoft.Azure.Devices.Edge.Util.Concurrency;
     using Microsoft.Azure.Devices.Shared;
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
@@ -33,6 +34,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
         readonly CloudReceiver cloudReceiver;
         readonly ResettableTimer timer;
         readonly bool closeOnIdleTimeout;
+        readonly AtomicLong subscriptionsCount = new AtomicLong(0);
 
         public CloudProxy(
             IClient client,
@@ -211,25 +213,41 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
             }
         }
 
-        public Task SetupCallMethodAsync() =>
-            this.EnsureCloudReceiver(nameof(this.SetupCallMethodAsync)) ? this.cloudReceiver.SetupCallMethodAsync() : Task.CompletedTask;
-
-        public Task RemoveCallMethodAsync() =>
-            this.EnsureCloudReceiver(nameof(this.RemoveCallMethodAsync)) ? this.cloudReceiver.RemoveCallMethodAsync() : Task.CompletedTask;
-
-        public Task SetupDesiredPropertyUpdatesAsync() =>
-            this.EnsureCloudReceiver(nameof(this.SetupDesiredPropertyUpdatesAsync)) ? this.cloudReceiver.SetupDesiredPropertyUpdatesAsync() : Task.CompletedTask;
-
-        public Task RemoveDesiredPropertyUpdatesAsync() =>
-            this.EnsureCloudReceiver(nameof(this.RemoveDesiredPropertyUpdatesAsync)) ? this.cloudReceiver.RemoveDesiredPropertyUpdatesAsync() : Task.CompletedTask;
-
-        public Task StartListening()
+        public Task SetupCallMethodAsync()
         {
-            if (this.EnsureCloudReceiver(nameof(this.RemoveDesiredPropertyUpdatesAsync)))
-            {
-                this.cloudReceiver.StartListening();
-            }
+            this.subscriptionsCount.Increment();
+            return this.cloudReceiver.SetupCallMethodAsync();
+        }
 
+        public Task RemoveCallMethodAsync()
+        {
+            this.subscriptionsCount.Decrement();
+            return this.cloudReceiver.RemoveCallMethodAsync();
+        }
+
+        public Task SetupDesiredPropertyUpdatesAsync()
+        {
+            this.subscriptionsCount.Increment();
+            return this.cloudReceiver.SetupDesiredPropertyUpdatesAsync();
+        }
+
+        public Task RemoveDesiredPropertyUpdatesAsync()
+        {
+            this.subscriptionsCount.Decrement();
+            return this.cloudReceiver.RemoveDesiredPropertyUpdatesAsync();
+        }
+
+        public Task InitC2DMessages()
+        {
+            this.subscriptionsCount.Increment();
+            this.cloudReceiver.InitC2DMessages();
+            return Task.CompletedTask;
+        }
+
+        public Task StopC2DMessages()
+        {
+            this.subscriptionsCount.Decrement();
+            this.cloudReceiver.StopC2DMessages();
             return Task.CompletedTask;
         }
 
@@ -238,25 +256,13 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
 
         Task HandleIdleTimeout()
         {
-            if (this.closeOnIdleTimeout)
+            if (this.closeOnIdleTimeout && this.subscriptionsCount.Get() == 0)
             {
                 Events.TimedOutClosing(this);
                 return this.CloseAsync();
             }
 
             return Task.CompletedTask;
-        }
-
-        bool EnsureCloudReceiver(string operation)
-        {
-            if (this.cloudReceiver == null)
-            {
-                Events.CloudReceiverNull(this.clientId, operation);
-                return false;
-            }
-
-            this.timer.Disable();
-            return true;
         }
 
         Task HandleException(Exception ex)
@@ -285,10 +291,10 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
         {
             readonly CloudProxy cloudProxy;
             readonly ICloudListener cloudListener;
-            readonly CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
             readonly DesiredPropertyUpdateHandler desiredUpdateHandler;
             readonly object receiveMessageLoopLock = new object();
             Option<Task> receiveMessageTask = Option.None<Task>();
+            CancellationTokenSource c2dCancellationTokenSource;
 
             // IotHub has max timeout set to 5 minutes, add 30 seconds to make sure it doesn't timeout before IotHub
             static readonly TimeSpan DeviceMethodMaxResponseTimeout = TimeSpan.FromSeconds(5 * 60 + 30);
@@ -304,14 +310,15 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
                 this.desiredUpdateHandler = new DesiredPropertyUpdateHandler(cloudListener, converter, cloudProxy);
             }
 
-            public void StartListening()
+            public void InitC2DMessages()
             {
-                if (!this.receiveMessageTask.HasValue)
+                if (!this.receiveMessageTask.HasValue || this.receiveMessageTask.Filter(r => r.IsCompleted).HasValue)
                 {
                     lock (this.receiveMessageLoopLock)
                     {
-                        if (!this.receiveMessageTask.HasValue)
+                        if (!this.receiveMessageTask.HasValue || this.receiveMessageTask.Filter(r => r.IsCompleted).HasValue)
                         {
+                            this.c2dCancellationTokenSource = new CancellationTokenSource();
                             Events.StartListening(this.cloudProxy.clientId);
                             this.receiveMessageTask = Option.Some(this.C2DMessagesLoop(this.cloudProxy.client));
                         }
@@ -319,10 +326,15 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
                 }
             }
 
+            public void StopC2DMessages()
+            {
+                this.c2dCancellationTokenSource.Cancel();
+            }
+
             public Task CloseAsync()
             {
                 Events.Closing(this.cloudProxy);
-                this.cancellationTokenSource.Cancel();
+                this.c2dCancellationTokenSource.Cancel();
                 return this.receiveMessageTask.GetOrElse(Task.CompletedTask);
             }
 
@@ -361,7 +373,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
                 Message clientMessage = null;
                 try
                 {
-                    while (!this.cancellationTokenSource.Token.IsCancellationRequested)
+                    while (!this.c2dCancellationTokenSource.Token.IsCancellationRequested)
                     {
                         try
                         {

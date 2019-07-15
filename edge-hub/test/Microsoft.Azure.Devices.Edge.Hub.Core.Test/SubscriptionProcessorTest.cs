@@ -34,7 +34,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             // Arrange
             string id = "d1";
             var cloudProxy = new Mock<ICloudProxy>(MockBehavior.Strict);
-            cloudProxy.Setup(c => c.StartListening());
+            cloudProxy.Setup(c => c.InitC2DMessages());
             var connectionManager = Mock.Of<IConnectionManager>(c => c.GetCloudConnection(id) == Task.FromResult(Option.Some(cloudProxy.Object)));
             SubscriptionProcessor subscriptionProcessor = GetSubscriptionProcessor(connectionManager);
 
@@ -125,7 +125,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             var cloudProxy = new Mock<ICloudProxy>(MockBehavior.Strict);
             cloudProxy.Setup(c => c.SetupCallMethodAsync());
             cloudProxy.Setup(c => c.RemoveDesiredPropertyUpdatesAsync());
-            cloudProxy.Setup(c => c.StartListening());
+            cloudProxy.Setup(c => c.InitC2DMessages());
             var connectionManager = Mock.Of<IConnectionManager>(c => c.GetCloudConnection(id) == Task.FromResult(Option.Some(cloudProxy.Object)));
             SubscriptionProcessor subscriptionProcessor = GetSubscriptionProcessor(connectionManager);
 

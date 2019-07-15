@@ -95,7 +95,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
                 .Callback(() => cloudReceiver.CloseAsync());
 
             // Act
-            cloudReceiver.StartListening();
+            cloudReceiver.InitC2DMessages();
 
             // Assert
             cloudListener.Verify(m => m.ProcessMessageAsync(sampleMessage));
@@ -118,7 +118,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
             CloudProxy.CloudReceiver cloudReceiver = cloudProxy.GetCloudReceiver();
 
             // Act
-            cloudReceiver.StartListening(); // Exception expected to be handled and not thrown.
+            cloudReceiver.InitC2DMessages(); // Exception expected to be handled and not thrown.
 
             // Assert
             // The verification is implicit, just making sure the exception is handled.
@@ -149,7 +149,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
                 .Throws(new Exception());
 
             // Act
-            cloudReceiver.StartListening(); // Exception expected to be handled and not thrown.
+            cloudReceiver.InitC2DMessages(); // Exception expected to be handled and not thrown.
 
             // Assert
             cloudListener.Verify(m => m.ProcessMessageAsync(null));

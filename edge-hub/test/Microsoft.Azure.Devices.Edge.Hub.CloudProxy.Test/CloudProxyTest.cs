@@ -167,7 +167,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
             await cloudProxy.RemoveCallMethodAsync();
             await cloudProxy.SetupDesiredPropertyUpdatesAsync();
             await cloudProxy.RemoveDesiredPropertyUpdatesAsync();
-            await cloudProxy.StartListening();
+            await cloudProxy.InitC2DMessages();
         }
 
         [Fact]

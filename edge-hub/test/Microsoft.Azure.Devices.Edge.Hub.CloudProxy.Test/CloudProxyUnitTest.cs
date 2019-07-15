@@ -207,7 +207,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
             ICloudProxy cloudProxy = new CloudProxy(client.Object, messageConverterProvider.Object, "device1", null, cloudListener.Object, idleTimeout, true);
 
             // Act
-            await cloudProxy.StartListening();
+            await cloudProxy.InitC2DMessages();
 
             // Assert
             Assert.True(cloudProxy.IsActive);
