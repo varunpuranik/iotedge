@@ -294,7 +294,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
             readonly DesiredPropertyUpdateHandler desiredUpdateHandler;
             readonly object receiveMessageLoopLock = new object();
             Option<Task> receiveMessageTask = Option.None<Task>();
-            CancellationTokenSource c2dCancellationTokenSource;
+            Option<CancellationTokenSource> receiveMessageCancellationTokenSource;
 
             // IotHub has max timeout set to 5 minutes, add 30 seconds to make sure it doesn't timeout before IotHub
             static readonly TimeSpan DeviceMethodMaxResponseTimeout = TimeSpan.FromSeconds(5 * 60 + 30);
@@ -318,9 +318,10 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
                     {
                         if (!this.receiveMessageTask.HasValue || this.receiveMessageTask.Filter(r => r.IsCompleted).HasValue)
                         {
-                            this.c2dCancellationTokenSource = new CancellationTokenSource();
+                            var cts = new CancellationTokenSource();
+                            this.receiveMessageCancellationTokenSource = Option.Some(cts);
                             Events.StartListening(this.cloudProxy.clientId);
-                            this.receiveMessageTask = Option.Some(this.C2DMessagesLoop(this.cloudProxy.client));
+                            this.receiveMessageTask = Option.Some(this.C2DMessagesLoop(this.cloudProxy.client, cts.Token));
                         }
                     }
                 }
@@ -328,13 +329,13 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
 
             public void StopC2DMessages()
             {
-                this.c2dCancellationTokenSource.Cancel();
+                this.receiveMessageCancellationTokenSource.ForEach(c => c.Cancel());
             }
 
             public Task CloseAsync()
             {
                 Events.Closing(this.cloudProxy);
-                this.c2dCancellationTokenSource.Cancel();
+                this.receiveMessageCancellationTokenSource.ForEach(c => c.Cancel());
                 return this.receiveMessageTask.GetOrElse(Task.CompletedTask);
             }
 
@@ -368,12 +369,12 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
                 return handler.OnDesiredPropertyUpdates(desiredProperties);
             }
 
-            async Task C2DMessagesLoop(IClient deviceClient)
+            async Task C2DMessagesLoop(IClient deviceClient, CancellationToken cancellationToken)
             {
                 Message clientMessage = null;
                 try
                 {
-                    while (!this.c2dCancellationTokenSource.Token.IsCancellationRequested)
+                    while (!cancellationToken.IsCancellationRequested)
                     {
                         try
                         {
@@ -395,7 +396,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy
                             }
 
                             // Wait for some time before trying again.
-                            await Task.Delay(ReceiveC2DMessageTimeout);
+                            await Task.Delay(ReceiveC2DMessageTimeout, cancellationToken);
                             Events.ErrorReceivingMessage(this.cloudProxy, e);
                         }
                     }
