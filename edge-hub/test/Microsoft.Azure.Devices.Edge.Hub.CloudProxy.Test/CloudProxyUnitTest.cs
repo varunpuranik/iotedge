@@ -136,6 +136,15 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
             Assert.True(cloudProxy.IsActive);
             Assert.True(isClientActive);
             client.Verify(c => c.CloseAsync(), Times.Never);
+
+            // Act
+            await cloudProxy.RemoveDesiredPropertyUpdatesAsync();
+            await Task.Delay(TimeSpan.FromSeconds(4));
+
+            // Assert
+            Assert.False(cloudProxy.IsActive);
+            Assert.False(isClientActive);
+            client.Verify(c => c.CloseAsync(), Times.Once);
         }
 
         [Fact]
@@ -177,6 +186,15 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
             Assert.True(cloudProxy.IsActive);
             Assert.True(isClientActive);
             client.Verify(c => c.CloseAsync(), Times.Never);
+
+            // Act
+            await cloudProxy.RemoveCallMethodAsync();
+            await Task.Delay(TimeSpan.FromSeconds(4));
+
+            // Assert
+            Assert.False(cloudProxy.IsActive);
+            Assert.False(isClientActive);
+            client.Verify(c => c.CloseAsync(), Times.Once);
         }
 
         [Fact]
@@ -190,8 +208,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
                 .Returns(Task.CompletedTask);
             client.SetupGet(c => c.IsActive).Returns(() => isClientActive);
             client.Setup(c => c.ReceiveAsync(It.IsAny<TimeSpan>()))
-                // .Callback<TimeSpan>(t => Task.Yield())
-                .Returns(Task.FromResult<Message>(new Message()));
+                .Returns(Task.FromResult(new Message()));
 
             var messageConverter = new Mock<IMessageConverter<Message>>();
             messageConverter.Setup(m => m.FromMessage(It.IsAny<IMessage>()))
@@ -220,6 +237,90 @@ namespace Microsoft.Azure.Devices.Edge.Hub.CloudProxy.Test
             Assert.True(cloudProxy.IsActive);
             Assert.True(isClientActive);
             client.Verify(c => c.CloseAsync(), Times.Never);
+
+            // Act
+            await cloudProxy.StopC2DMessages();
+            await Task.Delay(TimeSpan.FromSeconds(4));
+
+            // Assert
+            Assert.False(cloudProxy.IsActive);
+            Assert.False(isClientActive);
+            client.Verify(c => c.CloseAsync(), Times.Once);
+        }
+
+        [Fact]
+        public async Task TestCloseOnSubscriptionsRemove()
+        {
+            // Arrange
+            var client = new Mock<IClient>();
+            bool isClientActive = true;
+            client.Setup(c => c.CloseAsync())
+                .Callback(() => isClientActive = false)
+                .Returns(Task.CompletedTask);
+            client.SetupGet(c => c.IsActive).Returns(() => isClientActive);
+            client.Setup(c => c.ReceiveAsync(It.IsAny<TimeSpan>()))
+                .Returns(Task.FromResult(new Message()));
+            client.Setup(c => c.SetMethodDefaultHandlerAsync(It.IsAny<MethodCallback>(), It.IsAny<object>()))
+                .Returns(Task.CompletedTask);
+            client.Setup(c => c.SetDesiredPropertyUpdateCallbackAsync(It.IsAny<DesiredPropertyUpdateCallback>(), It.IsAny<object>()))
+                .Returns(Task.CompletedTask);
+
+            var messageConverter = new Mock<IMessageConverter<Message>>();
+            messageConverter.Setup(m => m.FromMessage(It.IsAny<IMessage>()))
+                .Returns(new Message());
+
+            var messageConverterProvider = new Mock<IMessageConverterProvider>();
+            messageConverterProvider.Setup(m => m.Get<Message>())
+                .Returns(messageConverter.Object);
+
+            var cloudListener = new Mock<ICloudListener>();
+            cloudListener.Setup(c => c.ProcessMessageAsync(It.IsAny<IMessage>())).ThrowsAsync(new InvalidOperationException());
+            TimeSpan idleTimeout = TimeSpan.FromSeconds(3);
+            ICloudProxy cloudProxy = new CloudProxy(client.Object, messageConverterProvider.Object, "device1", null, cloudListener.Object, idleTimeout, true);
+
+            // Act
+            await cloudProxy.InitC2DMessages();
+            await cloudProxy.SetupDesiredPropertyUpdatesAsync();
+            await cloudProxy.SetupCallMethodAsync();
+
+            // Assert
+            Assert.True(cloudProxy.IsActive);
+            Assert.True(isClientActive);
+
+            // Act
+            await Task.Delay(TimeSpan.FromSeconds(4));
+
+            // Assert
+            Assert.True(cloudProxy.IsActive);
+            Assert.True(isClientActive);
+            client.Verify(c => c.CloseAsync(), Times.Never);
+
+            // Act
+            await cloudProxy.RemoveDesiredPropertyUpdatesAsync();
+            await Task.Delay(TimeSpan.FromSeconds(4));
+
+            // Assert
+            Assert.True(cloudProxy.IsActive);
+            Assert.True(isClientActive);
+            client.Verify(c => c.CloseAsync(), Times.Never);
+
+            // Act
+            await cloudProxy.RemoveCallMethodAsync();
+            await Task.Delay(TimeSpan.FromSeconds(4));
+
+            // Assert
+            Assert.True(cloudProxy.IsActive);
+            Assert.True(isClientActive);
+            client.Verify(c => c.CloseAsync(), Times.Never);
+
+            // Act
+            await cloudProxy.StopC2DMessages();
+            await Task.Delay(TimeSpan.FromSeconds(4));
+
+            // Assert
+            Assert.False(cloudProxy.IsActive);
+            Assert.False(isClientActive);
+            client.Verify(c => c.CloseAsync(), Times.Once);
         }
     }
 }
