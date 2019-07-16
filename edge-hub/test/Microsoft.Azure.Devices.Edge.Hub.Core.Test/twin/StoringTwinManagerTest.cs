@@ -225,7 +225,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Twin
 
             var connectionManager = Mock.Of<IConnectionManager>(
                 c =>
-                    c.CheckClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
+                    c.CheckActiveClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
                     && c.GetDeviceConnection(id) == Option.Some(deviceProxy.Object));
 
             var twinManager = new StoringTwinManager(
@@ -335,7 +335,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Twin
 
             var connectionManager = Mock.Of<IConnectionManager>(
                 c =>
-                    c.CheckClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
+                    c.CheckActiveClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
                     && c.GetDeviceConnection(id) == Option.Some(deviceProxy.Object));
 
             var twinManager = new StoringTwinManager(
@@ -443,7 +443,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Twin
 
             var connectionManager = Mock.Of<IConnectionManager>(
                 c =>
-                    c.CheckClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
+                    c.CheckActiveClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
                     && c.GetDeviceConnection(id) == Option.Some(deviceProxy.Object)
                     && c.GetConnectedClients() == new[] { identity });
 
@@ -554,7 +554,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Twin
 
             var connectionManager = Mock.Of<IConnectionManager>(
                 c =>
-                    c.CheckClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
+                    c.CheckActiveClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
                     && c.GetDeviceConnection(id) == Option.Some(deviceProxy.Object)
                     && c.GetConnectedClients() == new[] { identity });
 
@@ -608,7 +608,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Twin
 
             var connectionManager = Mock.Of<IConnectionManager>(
                 c =>
-                    c.CheckClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates) == false
+                    c.CheckActiveClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates) == false
                     && c.GetConnectedClients() == new[] { identity });
 
             var deviceConnectivityManager = new Mock<IDeviceConnectivityManager>();
@@ -689,7 +689,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Twin
 
             var connectionManager = Mock.Of<IConnectionManager>(
                 c =>
-                    c.CheckClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
+                    c.CheckActiveClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates)
                     && c.GetDeviceConnection(id) == Option.Some(deviceProxy.Object)
                     && c.GetConnectedClients() == new[] { identity });
 

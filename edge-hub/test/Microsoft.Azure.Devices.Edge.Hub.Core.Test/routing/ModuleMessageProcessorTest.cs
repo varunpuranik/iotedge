@@ -59,7 +59,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxyMock.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
 
             byte[] messageBody = Encoding.UTF8.GetBytes("Message body");
             var properties = new Dictionary<string, string>()
@@ -110,7 +110,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.None<IDeviceProxy>());
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
 
             byte[] messageBody = Encoding.UTF8.GetBytes("Message body");
             var properties = new Dictionary<string, string>()
@@ -167,7 +167,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxyMock.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
 
             byte[] messageBody = Encoding.UTF8.GetBytes("Message body");
             var properties = new Dictionary<string, string>()
@@ -224,7 +224,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxyMock.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
 
             byte[] messageBody = Encoding.UTF8.GetBytes("Message body");
             var properties = new Dictionary<string, string>()

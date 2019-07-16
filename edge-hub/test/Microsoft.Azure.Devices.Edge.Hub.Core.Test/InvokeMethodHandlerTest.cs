@@ -32,7 +32,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
 
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxy.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>()))
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>()))
                 .Returns(Option.Some(new ReadOnlyDictionary<DeviceSubscription, bool>(deviceSubscriptions) as IReadOnlyDictionary<DeviceSubscription, bool>));
 
             IInvokeMethodHandler invokeMethodHandler = new InvokeMethodHandler(connectionManager.Object);
@@ -66,7 +66,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
 
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxy.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>()))
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>()))
                 .Returns(Option.Some(new ReadOnlyDictionary<DeviceSubscription, bool>(deviceSubscriptions) as IReadOnlyDictionary<DeviceSubscription, bool>));
 
             IInvokeMethodHandler invokeMethodHandler = new InvokeMethodHandler(connectionManager.Object);
@@ -102,7 +102,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             connectionManager.SetupSequence(c => c.GetDeviceConnection(It.IsAny<string>()))
                 .Returns(Option.None<IDeviceProxy>())
                 .Returns(Option.Some(deviceProxy.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>()))
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>()))
                 .Returns(Option.Some(new ReadOnlyDictionary<DeviceSubscription, bool>(deviceSubscriptions) as IReadOnlyDictionary<DeviceSubscription, bool>));
 
             IInvokeMethodHandler invokeMethodHandler = new InvokeMethodHandler(connectionManager.Object);
@@ -145,7 +145,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>()))
                 .Returns(Option.Some(deviceProxy.Object));
-            connectionManager.SetupSequence(c => c.GetSubscriptions(It.IsAny<string>()))
+            connectionManager.SetupSequence(c => c.GetActiveSubscriptions(It.IsAny<string>()))
                 .Returns(Option.Some(new ReadOnlyDictionary<DeviceSubscription, bool>(new Dictionary<DeviceSubscription, bool>()) as IReadOnlyDictionary<DeviceSubscription, bool>))
                 .Returns(Option.Some(new ReadOnlyDictionary<DeviceSubscription, bool>(deviceSubscriptions) as IReadOnlyDictionary<DeviceSubscription, bool>));
 

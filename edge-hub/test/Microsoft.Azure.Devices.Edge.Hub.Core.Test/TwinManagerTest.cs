@@ -1232,7 +1232,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(t => t.GetCloudConnection(It.IsAny<string>())).Returns(Task.FromResult(cloudProxy));
             connectionManager.Setup(t => t.GetDeviceConnection(It.IsAny<string>())).Returns(deviceProxy);
-            connectionManager.Setup(t => t.GetSubscriptions(deviceId))
+            connectionManager.Setup(t => t.GetActiveSubscriptions(deviceId))
                 .Returns(Option.Some(deviceSubscriptions));
 
             var twinManager = new TwinManager(connectionManager.Object, this.twinCollectionMessageConverter, this.twinMessageConverter, this.twinStore);
@@ -1421,7 +1421,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(t => t.GetCloudConnection(It.IsAny<string>())).Returns(Task.FromResult(cloudProxy));
             connectionManager.Setup(t => t.GetDeviceConnection(It.IsAny<string>())).Returns(deviceProxy);
-            connectionManager.Setup(t => t.GetSubscriptions(deviceId))
+            connectionManager.Setup(t => t.GetActiveSubscriptions(deviceId))
                 .Returns(Option.Some(deviceSubscriptions));
 
             var twinManager = new TwinManager(connectionManager.Object, this.twinCollectionMessageConverter, this.twinMessageConverter, this.twinStore);

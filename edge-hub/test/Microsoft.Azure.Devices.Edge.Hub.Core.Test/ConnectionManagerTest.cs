@@ -572,7 +572,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
 
             // Act
             await connectionManager.AddDeviceConnection(identity, Mock.Of<IDeviceProxy>(d => d.IsActive));
-            Option<IReadOnlyDictionary<DeviceSubscription, bool>> subscriptionsOption = connectionManager.GetSubscriptions(deviceId);
+            Option<IReadOnlyDictionary<DeviceSubscription, bool>> subscriptionsOption = connectionManager.GetActiveSubscriptions(deviceId);
 
             // Assert
             Assert.True(subscriptionsOption.HasValue);
@@ -582,7 +582,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             // Act
             connectionManager.AddSubscription(deviceId, DeviceSubscription.Methods);
             connectionManager.AddSubscription(deviceId, DeviceSubscription.C2D);
-            subscriptionsOption = connectionManager.GetSubscriptions(deviceId);
+            subscriptionsOption = connectionManager.GetActiveSubscriptions(deviceId);
 
             // Assert
             Assert.True(subscriptionsOption.HasValue);
@@ -594,7 +594,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             // Act
             connectionManager.RemoveSubscription(deviceId, DeviceSubscription.Methods);
             connectionManager.RemoveSubscription(deviceId, DeviceSubscription.DesiredPropertyUpdates);
-            subscriptionsOption = connectionManager.GetSubscriptions(deviceId);
+            subscriptionsOption = connectionManager.GetActiveSubscriptions(deviceId);
 
             // Assert
             Assert.True(subscriptionsOption.HasValue);
@@ -627,14 +627,14 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             var deviceProxy2 = Mock.Of<IDeviceProxy>(d => d.IsActive && d.Identity == identity);
 
             // Act
-            Option<IReadOnlyDictionary<DeviceSubscription, bool>> subscriptionsOption = connectionManager.GetSubscriptions(deviceId);
+            Option<IReadOnlyDictionary<DeviceSubscription, bool>> subscriptionsOption = connectionManager.GetActiveSubscriptions(deviceId);
 
             // Assert
             Assert.False(subscriptionsOption.HasValue);
 
             // Act
             await connectionManager.AddDeviceConnection(identity, deviceProxy);
-            subscriptionsOption = connectionManager.GetSubscriptions(deviceId);
+            subscriptionsOption = connectionManager.GetActiveSubscriptions(deviceId);
 
             // Assert
             Assert.True(subscriptionsOption.HasValue);
@@ -644,7 +644,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             // Act
             connectionManager.AddSubscription(deviceId, DeviceSubscription.Methods);
             connectionManager.AddSubscription(deviceId, DeviceSubscription.C2D);
-            subscriptionsOption = connectionManager.GetSubscriptions(deviceId);
+            subscriptionsOption = connectionManager.GetActiveSubscriptions(deviceId);
 
             // Assert
             Assert.True(subscriptionsOption.HasValue);
@@ -655,14 +655,14 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
 
             // Act
             await connectionManager.RemoveDeviceConnection(deviceId);
-            subscriptionsOption = connectionManager.GetSubscriptions(deviceId);
+            subscriptionsOption = connectionManager.GetActiveSubscriptions(deviceId);
 
             // Assert
             Assert.False(subscriptionsOption.HasValue);
 
             // Act
             await connectionManager.AddDeviceConnection(identity, deviceProxy2);
-            subscriptionsOption = connectionManager.GetSubscriptions(deviceId);
+            subscriptionsOption = connectionManager.GetActiveSubscriptions(deviceId);
 
             // Assert
             Assert.True(subscriptionsOption.HasValue);
@@ -674,7 +674,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             // Act
             connectionManager.AddSubscription(deviceId, DeviceSubscription.DesiredPropertyUpdates);
             connectionManager.AddSubscription(deviceId, DeviceSubscription.ModuleMessages);
-            subscriptionsOption = connectionManager.GetSubscriptions(deviceId);
+            subscriptionsOption = connectionManager.GetActiveSubscriptions(deviceId);
 
             // Assert
             Assert.True(subscriptionsOption.HasValue);

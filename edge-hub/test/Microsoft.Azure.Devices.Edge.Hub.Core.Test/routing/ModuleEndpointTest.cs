@@ -81,7 +81,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxy.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
             var routingMessage = Mock.Of<IRoutingMessage>();
             string moduleId = "device1/module1";
             string moduleEndpointAddress = "in1";
@@ -110,7 +110,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxy.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
             var moduleEndpoint = new ModuleEndpoint($"{moduleId}/{moduleEndpointAddress}", moduleId, moduleEndpointAddress, connectionManager.Object, routingMessageConverter);
 
             IProcessor moduleMessageProcessor = moduleEndpoint.CreateProcessor();
@@ -133,7 +133,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.None<IDeviceProxy>());
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
             var moduleEndpoint = new ModuleEndpoint($"{moduleId}/{moduleEndpointAddress}", moduleId, moduleEndpointAddress, connectionManager.Object, routingMessageConverter);
 
             IProcessor moduleMessageProcessor = moduleEndpoint.CreateProcessor();
@@ -159,7 +159,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxy.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
             var moduleEndpoint = new ModuleEndpoint($"{moduleId}/{moduleEndpointAddress}", moduleId, moduleEndpointAddress, connectionManager.Object, routingMessageConverter);
 
             IProcessor moduleMessageProcessor = moduleEndpoint.CreateProcessor();
@@ -185,7 +185,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxy.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
             var moduleEndpoint = new ModuleEndpoint($"{moduleId}/{moduleEndpointAddress}", moduleId, moduleEndpointAddress, connectionManager.Object, routingMessageConverter);
 
             IProcessor moduleMessageProcessor = moduleEndpoint.CreateProcessor();
@@ -211,7 +211,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test.Routing
                 });
             var connectionManager = new Mock<IConnectionManager>();
             connectionManager.Setup(c => c.GetDeviceConnection(It.IsAny<string>())).Returns(Option.Some(deviceProxy.Object));
-            connectionManager.Setup(c => c.GetSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
+            connectionManager.Setup(c => c.GetActiveSubscriptions(It.IsAny<string>())).Returns(Option.Some(deviceSubscriptions));
             var routingMessage = Mock.Of<IRoutingMessage>();
             string moduleId = "device1/module1";
             string moduleEndpointAddress = "in1";

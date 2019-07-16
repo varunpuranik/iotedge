@@ -202,9 +202,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Routing
                             Util.Option<IDeviceProxy> currentDeviceProxy = this.moduleEndpoint.connectionManager.GetDeviceConnection(this.moduleEndpoint.moduleId).Filter(d => d.IsActive);
                             if (currentDeviceProxy.HasValue)
                             {
-                                if (this.moduleEndpoint.connectionManager.GetSubscriptions(this.moduleEndpoint.moduleId)
-                                    .Filter(s => s.TryGetValue(DeviceSubscription.ModuleMessages, out bool isActive) && isActive)
-                                    .HasValue)
+                                if (this.moduleEndpoint.connectionManager.CheckActiveClientSubscription(this.moduleEndpoint.moduleId, DeviceSubscription.ModuleMessages))
                                 {
                                     return currentDeviceProxy;
                                 }

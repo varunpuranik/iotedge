@@ -95,9 +95,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core
             {
                 Events.NoDeviceProxyForMethodInvocation(id);
             }
-            else if (!this.connectionManager.GetSubscriptions(id)
-                .Filter(s => s.TryGetValue(DeviceSubscription.Methods, out bool isActive) && isActive)
-                .HasValue)
+            else if (!this.connectionManager.CheckActiveClientSubscription(id, DeviceSubscription.Methods))
             {
                 Events.NoSubscriptionForMethodInvocation(id);
             }

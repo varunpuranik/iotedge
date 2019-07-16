@@ -125,12 +125,18 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core
 
         public Option<IReadOnlyDictionary<DeviceSubscription, bool>> GetSubscriptions(string id) =>
             this.devices.TryGetValue(Preconditions.CheckNonWhiteSpace(id, nameof(id)), out ConnectedDevice device)
+                ? device.DeviceConnection
+                    .Map(d => new ReadOnlyDictionary<DeviceSubscription, bool>(d.Subscriptions) as IReadOnlyDictionary<DeviceSubscription, bool>)
+                : Option.None<IReadOnlyDictionary<DeviceSubscription, bool>>();
+
+        public Option<IReadOnlyDictionary<DeviceSubscription, bool>> GetActiveSubscriptions(string id) =>
+            this.devices.TryGetValue(Preconditions.CheckNonWhiteSpace(id, nameof(id)), out ConnectedDevice device)
                 ? device.DeviceConnection.Filter(d => d.IsActive)
                     .Map(d => new ReadOnlyDictionary<DeviceSubscription, bool>(d.Subscriptions) as IReadOnlyDictionary<DeviceSubscription, bool>)
                 : Option.None<IReadOnlyDictionary<DeviceSubscription, bool>>();
 
-        public bool CheckClientSubscription(string id, DeviceSubscription subscription) =>
-            this.GetSubscriptions(id)
+        public bool CheckActiveClientSubscription(string id, DeviceSubscription subscription) =>
+            this.GetActiveSubscriptions(id)
                 .Filter(s => s.TryGetValue(subscription, out bool isActive) && isActive)
                 .HasValue;
 

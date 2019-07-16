@@ -195,7 +195,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Twin
         async Task HandleDesiredPropertiesUpdates(string id)
         {
             Option<Twin> storeTwin = await this.twinStore.Get(id);
-            if (!storeTwin.HasValue && !this.connectionManager.CheckClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates))
+            if (!storeTwin.HasValue && !this.connectionManager.CheckActiveClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates))
             {
                 Events.NoTwinUsage(id);
             }
@@ -220,7 +220,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Twin
         Task SendPatchToDevice(string id, IMessage twinCollection)
         {
             Events.SendDesiredPropertyUpdates(id);
-            bool hasDesiredPropertyUpdatesSubscription = this.connectionManager.CheckClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates);
+            bool hasDesiredPropertyUpdatesSubscription = this.connectionManager.CheckActiveClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates);
             if (hasDesiredPropertyUpdatesSubscription)
             {
                 Events.SendDesiredPropertyUpdates(id);

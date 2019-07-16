@@ -2,7 +2,6 @@
 namespace Microsoft.Azure.Devices.Edge.Hub.Core
 {
     using System;
-    using System.Collections.Generic;
     using System.Text;
     using System.Threading.Tasks;
     using System.Threading.Tasks.Dataflow;
@@ -161,22 +160,14 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core
                                 cached = new TwinInfo(cloudTwin, t.ReportedPropertiesPatch);
                                 // If the device is subscribed to desired property updates and we are refreshing twin as a result
                                 // of a connection reset or desired property update, send a patch to the downstream device
-                                if (sendDesiredPropertyUpdate)
+                                if (sendDesiredPropertyUpdate &&
+                                    this.connectionManager.CheckActiveClientSubscription(id, DeviceSubscription.DesiredPropertyUpdates))
                                 {
-                                    Option<IReadOnlyDictionary<DeviceSubscription, bool>> subscriptions = this.connectionManager.GetSubscriptions(id);
-                                    subscriptions.ForEach(
-                                        s =>
-                                        {
-                                            if (s.TryGetValue(DeviceSubscription.DesiredPropertyUpdates, out bool hasDesiredPropertyUpdatesSubscription)
-                                                && hasDesiredPropertyUpdatesSubscription)
-                                            {
-                                                Events.SendDesiredPropertyUpdateToSubscriber(
-                                                    id,
-                                                    t.Twin.Properties.Desired.Version,
-                                                    cloudTwin.Properties.Desired.Version);
-                                                diff = new TwinCollection(JsonEx.Diff(t.Twin.Properties.Desired, cloudTwin.Properties.Desired));
-                                            }
-                                        });
+                                    Events.SendDesiredPropertyUpdateToSubscriber(
+                                        id,
+                                        t.Twin.Properties.Desired.Version,
+                                        cloudTwin.Properties.Desired.Version);
+                                    diff = new TwinCollection(JsonEx.Diff(t.Twin.Properties.Desired, cloudTwin.Properties.Desired));
                                 }
                             }
                         }

@@ -341,8 +341,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             var connectionManager = Mock.Of<IConnectionManager>(
                 c =>
                     c.GetConnectedClients() == connectedClients
-                    && c.GetSubscriptions(d1) == Option.Some(device1Subscriptions)
-                    && c.GetSubscriptions(m1) == Option.Some(module1Subscriptions)
+                    && c.GetActiveSubscriptions(d1) == Option.Some(device1Subscriptions)
+                    && c.GetActiveSubscriptions(m1) == Option.Some(module1Subscriptions)
                     && c.GetCloudConnection(d1) == Task.FromResult(Option.Some(device1CloudProxy))
                     && c.GetCloudConnection(m1) == Task.FromResult(Option.Some(module1CloudProxy)));
 
@@ -408,8 +408,8 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
 
             var connectionManager = Mock.Of<IConnectionManager>(
                 c =>
-                    c.GetSubscriptions(d1) == Option.Some(device1Subscriptions)
-                    && c.GetSubscriptions(m1) == Option.Some(module1Subscriptions)
+                    c.GetActiveSubscriptions(d1) == Option.Some(device1Subscriptions)
+                    && c.GetActiveSubscriptions(m1) == Option.Some(module1Subscriptions)
                     && c.GetCloudConnection(d1) == Task.FromResult(Option.Some(device1CloudProxy))
                     && c.GetCloudConnection(m1) == Task.FromResult(Option.Some(module1CloudProxy)));
 

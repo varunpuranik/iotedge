@@ -165,7 +165,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core
         async Task ProcessExistingSubscriptions(string id)
         {
             Option<ICloudProxy> cloudProxy = await this.ConnectionManager.GetCloudConnection(id);
-            Option<IReadOnlyDictionary<DeviceSubscription, bool>> subscriptions = this.ConnectionManager.GetSubscriptions(id);
+            Option<IReadOnlyDictionary<DeviceSubscription, bool>> subscriptions = this.ConnectionManager.GetActiveSubscriptions(id);
             await subscriptions.ForEachAsync(
                 async s =>
                 {
