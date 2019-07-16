@@ -370,5 +370,74 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Core.Test
             Mock.Get(invokeMethodHandler).VerifyAll();
             Mock.Get(connectionManager).VerifyAll();
         }
+
+        [Fact]
+        public async Task DeviceDisconnectTest()
+        {
+            // Arrange
+            string d1 = "d1";
+            var deviceIdentity = Mock.Of<IIdentity>(d => d.Id == d1);
+            string m1 = "d2/m1";
+            var moduleIdentity = Mock.Of<IIdentity>(m => m.Id == m1);
+
+            var connectedClients = new List<IIdentity>
+            {
+                deviceIdentity,
+                moduleIdentity
+            };
+
+            IReadOnlyDictionary<DeviceSubscription, bool> device1Subscriptions = new Dictionary<DeviceSubscription, bool>()
+            {
+                [DeviceSubscription.Methods] = true,
+                [DeviceSubscription.DesiredPropertyUpdates] = true
+            };
+
+            IReadOnlyDictionary<DeviceSubscription, bool> module1Subscriptions = new Dictionary<DeviceSubscription, bool>()
+            {
+                [DeviceSubscription.Methods] = true,
+                [DeviceSubscription.ModuleMessages] = true
+            };
+
+            var device1CloudProxy = Mock.Of<ICloudProxy>(
+                dc => dc.RemoveCallMethodAsync() == Task.CompletedTask
+                      && dc.RemoveDesiredPropertyUpdatesAsync() == Task.CompletedTask);
+            Mock.Get(device1CloudProxy).SetupGet(d => d.IsActive).Returns(true);
+            var module1CloudProxy = Mock.Of<ICloudProxy>(mc => mc.RemoveCallMethodAsync() == Task.CompletedTask && mc.IsActive);
+
+            var invokeMethodHandler = Mock.Of<IInvokeMethodHandler>();
+
+            var connectionManager = Mock.Of<IConnectionManager>(
+                c =>
+                    c.GetSubscriptions(d1) == Option.Some(device1Subscriptions)
+                    && c.GetSubscriptions(m1) == Option.Some(module1Subscriptions)
+                    && c.GetCloudConnection(d1) == Task.FromResult(Option.Some(device1CloudProxy))
+                    && c.GetCloudConnection(m1) == Task.FromResult(Option.Some(module1CloudProxy)));
+
+            var endpoint = new Mock<Endpoint>("myId");
+            var endpointExecutor = Mock.Of<IEndpointExecutor>();
+            Mock.Get(endpointExecutor).SetupGet(ee => ee.Endpoint).Returns(() => endpoint.Object);
+            var endpointExecutorFactory = Mock.Of<IEndpointExecutorFactory>();
+            Mock.Get(endpointExecutorFactory).Setup(eef => eef.CreateAsync(It.IsAny<Endpoint>())).ReturnsAsync(endpointExecutor);
+            var endpoints = new HashSet<Endpoint> { endpoint.Object };
+            var route = new Route("myRoute", "true", "myIotHub", TelemetryMessageSource.Instance, endpoints);
+            var routerConfig = new RouterConfig(new[] { route });
+            Router router = await Router.CreateAsync("myRouter", "myIotHub", routerConfig, endpointExecutorFactory);
+
+            var deviceConnectivityManager = Mock.Of<IDeviceConnectivityManager>();
+
+            var subscriptionProcessor = new SubscriptionProcessor(connectionManager, invokeMethodHandler, deviceConnectivityManager);
+
+            // Act
+            Mock.Get(connectionManager).Raise(d => d.DeviceDisconnected += null, new object(), deviceIdentity);
+            Mock.Get(connectionManager).Raise(d => d.DeviceDisconnected += null, new object(), moduleIdentity);
+
+            // Assert
+            await Task.Delay(TimeSpan.FromSeconds(2));
+            Mock.Get(device1CloudProxy).Verify(d => d.RemoveDesiredPropertyUpdatesAsync(), Times.Once);
+            Mock.Get(device1CloudProxy).Verify(d => d.RemoveCallMethodAsync(), Times.Once);
+            Mock.Get(module1CloudProxy).Verify(m => m.RemoveCallMethodAsync(), Times.Once);
+            Mock.Get(invokeMethodHandler).VerifyAll();
+            Mock.Get(connectionManager).VerifyAll();
+        }
     }
 }
