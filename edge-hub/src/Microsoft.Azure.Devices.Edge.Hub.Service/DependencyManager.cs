@@ -216,6 +216,7 @@ namespace Microsoft.Azure.Devices.Edge.Hub.Service
                     storageLimitThresholdPercentage,
                     diskSpaceCheckFrequency,
                     enableDiskSpaceChecks));
+        }
 
         static string GetProductInfo()
         {
