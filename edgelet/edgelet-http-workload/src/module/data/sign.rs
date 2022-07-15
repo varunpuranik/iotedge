@@ -6,9 +6,9 @@ use aziot_identity_client_async::Client as IdentityClient;
 use aziot_key_client_async::Client as KeyClient;
 
 #[cfg(test)]
-use edgelet_test_utils::clients::IdentityClient;
+use test_common::client::IdentityClient;
 #[cfg(test)]
-use edgelet_test_utils::clients::KeyClient;
+use test_common::client::KeyClient;
 
 pub(crate) struct Route<M>
 where
@@ -59,7 +59,7 @@ where
             .decode_utf8()
             .ok()?;
 
-        let pid = match extensions.get::<Option<libc::pid_t>>().cloned().flatten() {
+        let pid = match extensions.get::<Option<libc::pid_t>>().copied().flatten() {
             Some(pid) => pid,
             None => return None,
         };
@@ -81,7 +81,11 @@ where
 
         let data = match body {
             Some(body) => super::base64_decode(body.data)?,
-            None => return Err(edgelet_http::error::bad_request("missing request body")),
+            None => {
+                return Err(edgelet_http::error::bad_request(
+                    "missing parameter: request body",
+                ))
+            }
         };
 
         let module_key = get_module_key(self.identity_client, &self.module_id).await?;
@@ -95,7 +99,7 @@ where
                 &data,
             )
             .await
-            .map_err(|err| edgelet_http::error::server_error(err.to_string()))?;
+            .map_err(edgelet_http::error::server_error)?;
         let digest = base64::encode(digest);
 
         let res = SignResponse { digest };
@@ -211,7 +215,7 @@ mod tests {
     #[tokio::test]
     async fn get_module_key() {
         // Identity doesn't exist: fail
-        let client = edgelet_test_utils::clients::IdentityClient::default();
+        let client = super::IdentityClient::default();
         let client = std::sync::Arc::new(futures_util::lock::Mutex::new(client));
 
         let response = super::get_module_key(client, "invalid").await.unwrap_err();
@@ -230,7 +234,7 @@ mod tests {
             },
         });
 
-        let client = edgelet_test_utils::clients::IdentityClient::default();
+        let client = super::IdentityClient::default();
 
         {
             let identities = client.identities.lock().await;
@@ -256,7 +260,7 @@ mod tests {
         );
 
         // Identity missing auth: fail
-        let client = edgelet_test_utils::clients::IdentityClient::default();
+        let client = super::IdentityClient::default();
 
         {
             let identities = client.identities.lock().await;
@@ -288,7 +292,7 @@ mod tests {
         );
 
         // Identity missing key: fail
-        let client = edgelet_test_utils::clients::IdentityClient::default();
+        let client = super::IdentityClient::default();
 
         {
             let identities = client.identities.lock().await;
@@ -323,7 +327,7 @@ mod tests {
         );
 
         // Valid identity: succeed
-        let client = edgelet_test_utils::clients::IdentityClient::default();
+        let client = super::IdentityClient::default();
         let client = std::sync::Arc::new(futures_util::lock::Mutex::new(client));
 
         let response = super::get_module_key(client, "testModule").await.unwrap();

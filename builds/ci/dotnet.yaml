@@ -2,10 +2,11 @@ trigger:
   batch: true
   branches:
     include:
-      - master
+      - main
       - release/*
 pr: none
 variables:
+  DisableDockerDetector: true
   build.configuration: Release
   test.filter: Category=Integration&Category!=Stress
 jobs:

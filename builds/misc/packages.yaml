@@ -2,8 +2,11 @@ trigger:
   batch: true
   branches:
     include:
-      - master
+      - main
 pr: none
+
+variables:
+  DisableDockerDetector: true
 
 stages:
   - template: templates/build-packages.yaml

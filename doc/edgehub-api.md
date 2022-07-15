@@ -150,7 +150,7 @@ SharedAccessSignature test-srv.azure-devices.net%2Fdevices%2Ftest_device&sig=Mzv
 The SAS token for a device or module can be generated several different ways:
 - Using Visual Studio Code with [Azure IoT Hub extension](https://marketplace.visualstudio.com/items?itemName=vsciot-vscode.azure-iot-toolkit), using [these steps](https://github.com/Microsoft/vscode-azure-iot-toolkit/wiki/Generate-SAS-Token-for-IoT-Hub)
 - Using [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) with [IoT Extension](https://github.com/Azure/azure-iot-cli-extension) a [generate-sas-token](https://docs.microsoft.com/en-us/cli/azure/iot/hub?view=azure-cli-latest#az_iot_hub_generate_sas_token) command is available
-- The token generation can be implemented by [program code](https://github.com/microsoft/azure-docs/blob/master/articles/iot-hub/iot-hub-dev-guide-sas.md)
+- The token generation can be implemented by [program code](https://github.com/microsoft/azure-docs/blob/main/articles/iot-hub/iot-hub-dev-guide-sas.md)
 
 If there is an MQTT client library where an MQTT client object has a Connect() method with the signature:
 ```
@@ -187,9 +187,13 @@ If there is an Edge device called TestEdgeDevice and a module named TestModule w
 ```
 devices/TestEdgeDevice/modules/TestModule/#
 ```
-Depending on the routing settings, the routing may define an input name, which will be attached to the topic when a message is getting forwarded. Also, Edge Hub (and the original sender) adds parameters to the message which is encoded in the topic structure. The following example shows a message routed with input name "TestInput". This message was sent by a module called "SenderModule", which name is also encoded in the topic:
+Depending on the routing settings, the routing may define an [input name](https://docs.microsoft.com/en-us/azure/iot-edge/module-composition?view=iotedge-2020-11#sink), which will be attached to the topic when a message is getting forwarded. Also, Edge Hub (and the original sender) adds parameters to the message which is encoded in the topic structure. The following example shows a message routed with input name "TestInput". This message was sent by a module called "SenderModule", which name is also encoded in the topic:
 ```
 devices/TestEdgeDevice/modules/TestModule/inputs/TestInput/%24.cdid=TestEdgeDevice&%24.cmid=SenderModule
+```
+Modules can also send messages on a specific [output name](https://docs.microsoft.com/en-us/azure/iot-edge/module-composition?view=iotedge-2020-11#source). Output names help when messages from a module need to be routed to different destinations. When a module wants to send a message on a specific output, it sends the message as an regular telemetry message, except that it adds an additional system property to it. This system property is '\$.on'. The '\$' sign needs to be url encoded and it becomes %24 in the topic name. The following example shows a telemetry message sent with the output name 'alert':
+```
+devices/TestEdgeDevice/modules/TestModule/messages/events/%24.on=alert/
 ```
 ### Getting Full Twin
 Pulling the twin from IoT Hub/Edge Hub has a request/response pattern using MQTT. The request is a publication to a certain topic, where the topic name contains a Request Id encoded in it. When IoT Hub/Edge Hub provides the requested twin, it publishes it on a predefined topic, attaching the request id to the topic name.
@@ -295,100 +299,7 @@ When the client processed the direct method call, it can send back a payload and
 $iothub/methods/res/200/?$rid=505e09bb-0076-4b9f-b4a3-529430f1593f
 ```
 There is a configurable time limit the device/module needs to answer, which is 30 seconds by default, but can be set from 5 to 300 seconds.
-## Edge Hub MQTT Endpoint Extensions
-Edge Hub runs a full-fledged MQTT broker. **This is an experimental feature** and [needs to be turned on in order to use](https://docs.microsoft.com/en-us/azure/iot-edge/how-to-publish-subscribe?view=iotedge-2020-11#prerequisites). Also, **the MQTT broker related extensions are subject to change.**
 
-If the MQTT Broker experimental feature is turned on, then the operations discussed above can be also accessed by a different set of MQTT topics. One limitation of the existing topic structure is that many operations do not contain device/module id. IoT Hub and Edge Hub know from the connection which device needs to receive a message and they send directly to that specific device, regardless of the subscription of other devices.
-
-If there are two devices, device_a and device_b, and both subscribed to $iothub/twin/res/#, then device_a requests a twin, it will not be forwarded to device_b, even if the response is published on a topic starting with $iothub/twin/res/, and device_b is subscribed to that topic.
-
-Edge Hub MQTT extension uses a set of topics which includes device/module ids. This allows some scenarios not possible with legacy topics and can be useful for identity translation. Twins can be requested for example on a topic strucure '$iothub/{device_id}/twin/get/?$rid=1234'. Let's say that there are 5 different devices that too simple to be able to programmable to communicate using IoT Hub protocols. In this case it is still prossible to write a module that takes over IoT Hub communication and it is able to request the twin of any of those devices just changing the device_id part of the twin request topic - given that the authorization settings allow to do that.
-
-### Telemetry messages
-In case of devices, a telemetry message can be sent to Edge Hub if the MQTT broker is turned on using the following topics:
-
-If the client is a device:
-```
-$iothub/{device_id}/messages/events
-```
-If the client is a module:
-```
-$iothub/{device_id}/{module_id}/messages/events
-```
-Other parameters can be encoded into the topic similarly to the legacy telemetry topics.
-### Getting Full Twin
-If a client wants to be able to receive the result of its twin request, then it needs to subsribe to the following topic:
-
-If the client is a device:
-```
-$iothub/{device_id}/twin/res/#
-```
-If the client is a module:
-```
-$iothub/{device_id}/{module_id}/twin/res/#
-```
-After the subscription, the client can request a twin by publishing an empty message on the topic:
-
-If the client is a device:
-```
-$iothub/{device_id}/twin/get/?$rid={request_id}
-```
-If the client is a module:
-```
-$iothub/{device_id}/{module_id}/twin/get/?$rid={request_id}
-```
-Edge Hub is going to send the twin publishing on a topic similar to the following:
-```
-$iothub/some_device/some_module/twin/res/200/?$rid=1234
-```
-### Sending Reported Property Updates
-For sending propery updates, the client first needs to subscribe to the twin response topic just like when it pulls the full twin. After the subscription, the client can publish its update on the following topic:
-
-If the client is a device:
-```
-$iothub/{device_id}/twin/reported/?$rid={request_id}
-```
-If the client is a module:
-```
-$iothub/{device_id}/{module_id}/twin/reported/?$rid={request_id}
-```
-### Receiving Desired Property Updates
-The topic to subscribe for desired properties,
-
-If the client is a device:
-```
-$iothub/{device_id}/twin/desired/#
-```
-If the client is a module:
-```
-$iothub/{device_id}/{module_id}/twin/desired/#
-```
-### Receiving Cloud-to-Device messages
-In order to receive C2D messages, the client needs to subscribe to the following topic:
-```
-$iothub/{device_id}/messages/c2d/post/#
-```
-### Receiving Direct-Method calls
-To be able to receive direct method calls, a client needs to subscribe to:
-
-If the client is a device:
-```
-$iothub/{device_id}/methods/post/#
-```
-If the client is a module:
-```
-$iothub/{device_id}/{module_id}/methods/post/#
-```
-
-Edge Hub is going to send a direct method call similarly to the following:
-```
-$iothub/some_device/some_module/methods/post/some_method/?$rid=1234
-```
-In response the client needs to publish on the following topic:
-
-```
-$iothub/some_device/some_module/methods/res/200/?$rid=1234
-```
 ## Edge Hub HTTPS Endpoint
 Edge Hub opens up port 443 for HTTPS communication. This port serves three different public operations:
 - Amqp communication over WebSocket

@@ -6,7 +6,7 @@ use std::convert::TryFrom;
 use aziot_identity_client_async::Client as IdentityClient;
 
 #[cfg(test)]
-use edgelet_test_utils::clients::IdentityClient;
+use test_common::client::IdentityClient;
 
 pub(crate) struct Route<M>
 where
@@ -44,7 +44,7 @@ where
             .decode_utf8()
             .ok()?;
 
-        let pid = match extensions.get::<Option<libc::pid_t>>().cloned().flatten() {
+        let pid = match extensions.get::<Option<libc::pid_t>>().copied().flatten() {
             Some(pid) => pid,
             None => return None,
         };
@@ -136,7 +136,7 @@ mod tests {
     #[tokio::test]
     async fn update_delete() {
         // The Identity Client needs to be persisted across API calls.
-        let client = edgelet_test_utils::clients::IdentityClient::default();
+        let client = super::IdentityClient::default();
         let client = std::sync::Arc::new(futures_util::lock::Mutex::new(client));
 
         // Update Identity

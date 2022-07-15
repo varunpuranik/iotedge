@@ -22,7 +22,6 @@
     <ProjectReference Include="..\Microsoft.Azure.Devices.Edge.Agent.Edgelet.Docker\Microsoft.Azure.Devices.Edge.Agent.Edgelet.Docker.csproj" />
     <ProjectReference Include="..\Microsoft.Azure.Devices.Edge.Agent.Edgelet\Microsoft.Azure.Devices.Edge.Agent.Edgelet.csproj" />
     <ProjectReference Include="..\Microsoft.Azure.Devices.Edge.Agent.IoTHub\Microsoft.Azure.Devices.Edge.Agent.IoTHub.csproj" />
-    <ProjectReference Include="..\Microsoft.Azure.Devices.Edge.Agent.Kubernetes\Microsoft.Azure.Devices.Edge.Agent.Kubernetes.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="../../docker*/**/*.*" CopyToPublishDirectory="Always">
@@ -33,11 +32,6 @@
     <None Include="..\..\..\versionInfo.json" Link="versionInfo.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Update="../../docker/linux/arm32v7/base/Dockerfile">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings_agent.json">

@@ -52,13 +52,12 @@ where
             .decode_utf8()
             .ok()?;
 
-        let pid = match extensions.get::<Option<libc::pid_t>>().cloned().flatten() {
+        let pid = match extensions.get::<Option<libc::pid_t>>().copied().flatten() {
             Some(pid) => pid,
             None => return None,
         };
 
         let api = super::CertApi::new(
-            service.key_connector.clone(),
             service.key_client.clone(),
             service.cert_client.clone(),
             &service.config,

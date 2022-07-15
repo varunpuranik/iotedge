@@ -1,6 +1,7 @@
 name: $(version)
 
 variables:
+  DisableDockerDetector: true
   NugetSecurityAnalysisWarningLevel: warn
 
 stages:
@@ -11,7 +12,7 @@ stages:
   pool:
     name: $(pool.linux.name)
     demands:
-      - ImageOverride -equals agent-aziotedge-ubuntu-18.04-docker  
+      - ImageOverride -equals agent-aziotedge-ubuntu-20.04-docker  
   dependsOn: []
   jobs:
   # Build API Proxy executable
@@ -26,7 +27,7 @@ stages:
   pool:
     name: $(pool.linux.name)
     demands:
-      - ImageOverride -equals agent-aziotedge-ubuntu-18.04-docker  
+      - ImageOverride -equals agent-aziotedge-ubuntu-20.04-docker  
   dependsOn: BuildExecutables
   jobs:
   - job: ConsolidateAndPublishArtifacts
@@ -109,7 +110,7 @@ stages:
   pool:
     name: $(pool.linux.name)
     demands:
-      - ImageOverride -equals agent-aziotedge-ubuntu-18.04-docker
+      - ImageOverride -equals agent-aziotedge-ubuntu-20.04-docker
   dependsOn: BuildImages
   jobs:
   - job: PublishManifest

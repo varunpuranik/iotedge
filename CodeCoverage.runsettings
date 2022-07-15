@@ -38,7 +38,6 @@ Included items must then not match any entries in the exclude list to remain inc
                 <ModulePath>.*moq\..*</ModulePath>
                 <ModulePath>.*app.metrics.*\..*</ModulePath>
                 <ModulePath>.*autofac.*</ModulePath>
-                <ModulePath>.*bouncycastle\..*</ModulePath>
                 <ModulePath>.*fluentassertions.*</ModulePath>
                 <ModulePath>.*microsoft.codeanalysis\..*</ModulePath>
                 <ModulePath>.*microsoft.identitymodel\..*</ModulePath>
@@ -66,7 +65,6 @@ Included items must then not match any entries in the exclude list to remain inc
                 <ModulePath>.*iotedgequickstart\..*</ModulePath>
                 <ModulePath>.*leafdevice\..*</ModulePath>
                 <ModulePath>.*load-gen\..*</ModulePath>
-                <ModulePath>.*manifestsignerclient.*\..*</ModulePath>
                 <ModulePath>.*metricscollector\..*</ModulePath>
                 <ModulePath>.*metricsvalidator\..*</ModulePath>
                 <ModulePath>.*numberlogger\..*</ModulePath>

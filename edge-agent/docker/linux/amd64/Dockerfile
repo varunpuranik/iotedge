@@ -1,6 +1,6 @@
-ARG base_tag=3.1.19-alpine3.14
+# syntax=docker/dockerfile:1.4
 
-FROM mcr.microsoft.com/dotnet/aspnet:${base_tag}
+FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine
 
 ARG EXE_DIR=.
 

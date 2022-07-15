@@ -1,5 +1,5 @@
 #!/bin/bash
-#https://github.com/Azure/iotedge/blob/master/scripts/linux/cross-platform-rust-build.sh
+#https://github.com/Azure/iotedge/blob/main/scripts/linux/cross-platform-rust-build.sh
 ###############################################################################
 # This script builds a static binary of the api-proxy-module
 ###############################################################################
@@ -153,9 +153,9 @@ build_project()
     if [[ "$ARCH" == "amd64" ]]; then
         execute scripts/linux/cross-platform-rust-build.sh --os alpine --arch "amd64" --build-path edge-modules/api-proxy-module
     elif [[ "$ARCH" == "arm32v7" ]]; then
-        execute scripts/linux/cross-platform-rust-build.sh --os ubuntu18.04 --arch "arm32v7" --build-path edge-modules/api-proxy-module
+        execute scripts/linux/cross-platform-rust-build.sh --os ubuntu20.04 --arch "arm32v7" --build-path edge-modules/api-proxy-module
     elif [[ "$ARCH" == "arm64v8" ]]; then
-        execute scripts/linux/cross-platform-rust-build.sh --os ubuntu18.04 --arch "aarch64" --build-path edge-modules/api-proxy-module
+        execute scripts/linux/cross-platform-rust-build.sh --os ubuntu20.04 --arch "aarch64" --build-path edge-modules/api-proxy-module
     else
         echo "Cannot run script Unsupported architecture $ARCH"
         exit 1
