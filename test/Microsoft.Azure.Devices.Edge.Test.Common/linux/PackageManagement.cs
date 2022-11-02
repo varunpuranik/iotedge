@@ -60,7 +60,7 @@ namespace Microsoft.Azure.Devices.Edge.Test.Common.Linux
                     "rhel" => new[]
                     {
                         "set -e",
-                        $"sudo rpm --nodeps -i {string.Join(' ', packages)}",
+                        $"sudo dnf -y install {string.Join(' ', packages)}",
                         "pathToSystemdConfig=$(systemctl cat aziot-edged | head -n 1)",
                         "pathToOverride=$(dirname ${pathToSystemdConfig#?})/aziot-edged.service.d",
                         "sudo mkdir $pathToOverride",
@@ -68,7 +68,16 @@ namespace Microsoft.Azure.Devices.Edge.Test.Common.Linux
                         "sudo mv -f ~/override.conf ${pathToOverride}/overrides.conf",
                         "sudo systemctl daemon-reload"
                     },
-                    _ => throw new NotImplementedException($"RPM packaging is set up only for Centos and RHEL, current OS '.{this.os}'"),
+                    "mariner" => new[]
+                    {
+                        "set -e",
+                        $"sudo dnf -y install {string.Join(' ', packages)}",
+                        "pathToSystemdConfig=$(systemctl cat aziot-edged | head -n 1)",
+                        "sed 's/=on-failure/=no/g' ${pathToSystemdConfig#?} > ~/override.conf",
+                        "sudo mv -f ~/override.conf ${pathToSystemdConfig#?}",
+                        "sudo systemctl daemon-reload"
+                    },
+                    _ => throw new NotImplementedException($"RPM packaging is set up only for Centos, Mariner, and RHEL, current OS '.{this.os}'"),
                 },
                 _ => throw new NotImplementedException($"Don't know how to install daemon on for '.{this.packageExtension}'"),
             };

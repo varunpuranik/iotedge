@@ -1,21 +1,21 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 use std::collections::BTreeMap;
+use std::ffi::OsStr;
 use std::fmt;
 use std::time::Duration;
 
 use anyhow::Context;
 use chrono::prelude::*;
+use nix::sys::utsname::UtsName;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc::UnboundedSender;
 
 use aziotctl_common::host_info::{DmiInfo, OsInfo};
 use edgelet_settings::module::Settings as ModuleSpec;
-use edgelet_settings::RuntimeSettings;
 
 use crate::error::Error;
 
-#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ModuleStatus {
     Unknown,
@@ -57,7 +57,7 @@ pub enum ModuleAction {
     Remove(String),
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ModuleRuntimeState {
     status: ModuleStatus,
     exit_code: Option<i64>,
@@ -129,7 +129,7 @@ impl ModuleRuntimeState {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum LogTail {
     All,
     Num(u64),
@@ -255,12 +255,14 @@ pub trait ModuleRegistry {
     async fn remove(&self, name: &str) -> anyhow::Result<()>;
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct SystemInfo {
     #[serde(rename = "osType")]
     pub kernel: String,
-    pub kernel_release: String,
-    pub kernel_version: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kernel_release: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kernel_version: Option<String>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operating_system: Option<String>,
@@ -272,7 +274,9 @@ pub struct SystemInfo {
     pub operating_system_build: Option<String>,
 
     pub architecture: String,
-    pub cpus: usize,
+    pub cpus: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_memory: Option<u64>,
     pub virtualized: String,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -310,6 +314,7 @@ impl SystemInfo {
         remove_assign!(operating_system_build);
 
         remove_assign!(architecture);
+        remove_assign!(virtualized);
 
         remove_assign!(product_name);
         remove_assign!(system_vendor);
@@ -325,14 +330,32 @@ impl SystemInfo {
 
 impl Default for SystemInfo {
     fn default() -> Self {
-        let kernel = nix::sys::utsname::uname();
+        let kernel = nix::sys::utsname::uname()
+            .map_err(|e| log::error!("Failed calling uname(): {}", e))
+            .ok();
+
+        let kernel = kernel.as_ref();
+
         let dmi = DmiInfo::default();
         let os = OsInfo::default();
 
-        let res = Self {
-            kernel: kernel.sysname().to_owned(),
-            kernel_release: kernel.release().to_owned(),
-            kernel_version: kernel.version().to_owned(),
+        Self {
+            // NOTE: `kernel` maps to `osType`, which is required by the
+            // management API.  So, we have to provide some value even
+            // in the case of failure.
+            kernel: kernel
+                .map(UtsName::sysname)
+                .and_then(OsStr::to_str)
+                .unwrap_or("UNKNOWN")
+                .to_owned(),
+            kernel_release: kernel
+                .map(UtsName::release)
+                .and_then(OsStr::to_str)
+                .map(ToOwned::to_owned),
+            kernel_version: kernel
+                .map(UtsName::version)
+                .and_then(OsStr::to_str)
+                .map(ToOwned::to_owned),
 
             operating_system: os.id,
             operating_system_version: os.version_id,
@@ -340,7 +363,8 @@ impl Default for SystemInfo {
             operating_system_build: os.build_id,
 
             architecture: os.arch.to_owned(),
-            cpus: num_cpus::get(),
+            cpus: u64::try_from(num_cpus::get()).expect("128-bit architectures unsupported"),
+            total_memory: None,
             virtualized: match crate::virtualization::is_virtualized_env() {
                 Ok(Some(true)) => "yes",
                 Ok(Some(false)) => "no",
@@ -361,13 +385,11 @@ impl Default for SystemInfo {
             },
 
             additional_properties: BTreeMap::new(),
-        };
-
-        res
+        }
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ProvisioningInfo {
     /// IoT Edge provisioning type, examples: manual.device_connection_string, dps.x509
     pub r#type: String,
@@ -443,18 +465,6 @@ pub trait ProvisioningResult {
 }
 
 #[async_trait::async_trait]
-pub trait MakeModuleRuntime {
-    type Config: Clone + Send;
-    type Settings: RuntimeSettings<ModuleConfig = Self::Config>;
-    type ModuleRuntime: ModuleRuntime<Config = Self::Config>;
-
-    async fn make_runtime(
-        settings: &Self::Settings,
-        create_socket_channel: UnboundedSender<ModuleAction>,
-    ) -> anyhow::Result<Self::ModuleRuntime>;
-}
-
-#[async_trait::async_trait]
 pub trait ModuleRuntime {
     type Config: Clone + Send + serde::Serialize;
     type Module: Module<Config = Self::Config> + Send;
@@ -470,6 +480,7 @@ pub trait ModuleRuntime {
     async fn system_resources(&self) -> anyhow::Result<SystemResources>;
     async fn list(&self) -> anyhow::Result<Vec<Self::Module>>;
     async fn list_with_details(&self) -> anyhow::Result<Vec<(Self::Module, ModuleRuntimeState)>>;
+    async fn list_images(&self) -> anyhow::Result<std::collections::HashMap<String, String>>;
     async fn logs(&self, id: &str, options: &LogOptions) -> anyhow::Result<hyper::Body>;
     async fn remove_all(&self) -> anyhow::Result<()>;
     async fn stop_all(&self, wait_before_kill: Option<Duration>) -> anyhow::Result<()>;
@@ -517,13 +528,14 @@ impl fmt::Display for RegistryOperation {
 }
 
 // Useful for error contexts
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RuntimeOperation {
     CreateModule(String),
     GetModule(String),
     GetModuleLogs(String),
     GetSupportBundle,
     Init,
+    ListImages,
     ListModules,
     RemoveModule(String),
     RestartModule(String),
@@ -545,6 +557,7 @@ impl fmt::Display for RuntimeOperation {
             RuntimeOperation::GetSupportBundle => write!(f, "get support bundle"),
             RuntimeOperation::Init => write!(f, "initialize module runtime"),
             RuntimeOperation::ListModules => write!(f, "list modules"),
+            RuntimeOperation::ListImages => write!(f, "list images"),
             RuntimeOperation::RemoveModule(name) => write!(f, "remove module {:?}", name),
             RuntimeOperation::RestartModule(name) => write!(f, "restart module {:?}", name),
             RuntimeOperation::StartModule(name) => write!(f, "start module {:?}", name),
@@ -650,8 +663,8 @@ mod tests {
     fn system_info_merge() {
         let mut base = SystemInfo {
             kernel: "FOO".into(),
-            kernel_release: "BAR".into(),
-            kernel_version: "BAZ".into(),
+            kernel_release: Some("BAR".into()),
+            kernel_version: Some("BAZ".into()),
 
             operating_system: "A".to_owned().into(),
             operating_system_version: "B".to_owned().into(),
@@ -660,6 +673,7 @@ mod tests {
 
             architecture: "ARCH".into(),
             cpus: 0,
+            total_memory: None,
             virtualized: "UNKNOWN".into(),
 
             product_name: None,
@@ -679,8 +693,8 @@ mod tests {
 
         let result = SystemInfo {
             kernel: "linux".into(),
-            kernel_release: "5.0".into(),
-            kernel_version: "1".into(),
+            kernel_release: Some("5.0".into()),
+            kernel_version: Some("1".into()),
 
             operating_system: "OS".to_owned().into(),
             operating_system_version: "B".to_owned().into(),
@@ -689,6 +703,7 @@ mod tests {
 
             architecture: "ARCH".into(),
             cpus: 0,
+            total_memory: None,
             virtualized: "UNKNOWN".into(),
 
             product_name: None,

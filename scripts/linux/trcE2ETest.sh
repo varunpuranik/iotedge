@@ -55,6 +55,7 @@ function usage() {
     echo " -clientModuleTransportType               Value for contrained long haul specifying transport type for all client modules."
     echo " -trackingId                              Tracking id used to tag test events. Needed if running nested tests and test events are sent to TRC from L4 node. Otherwise generated."
     echo ' -cleanAll                                Do docker prune for containers, logs and volumes.'
+    echo ' -packageType                             Package type to be used [deb, rpm]'
     exit 1;
 }
 
@@ -90,9 +91,9 @@ function get_artifact_file() {
 
     local filter
     case "$fileType" in
-        'aziot_edge' ) filter='aziot-edge_*.deb';;
-        'aziot_is' ) filter='aziot-identity-service_*.deb';;
-        'quickstart' ) filter='core-linux/IotEdgeQuickstart.linux*.tar.gz';;
+        'aziot_edge' ) filter="aziot-edge*.$PACKAGE_TYPE";;
+        'aziot_is' ) filter="aziot-identity-service*.$PACKAGE_TYPE";;
+        'quickstart' ) filter="core-linux/IotEdgeQuickstart.linux*.tar.gz";;
         *) print_error "Unknown file type: $fileType"; exit 1;;
     esac
 
@@ -461,6 +462,9 @@ function process_args() {
         elif [ $saveNextArg -eq 48 ]; then
             TOPOLOGY="$arg"
             saveNextArg=0;
+        elif [ $saveNextArg -eq 49 ]; then
+            PACKAGE_TYPE="$arg"
+            saveNextArg=0
         else
             case "$arg" in
                 '-h' | '--help' ) usage;;
@@ -512,6 +516,7 @@ function process_args() {
                 '-clientModuleTransportType' ) saveNextArg=46;;
                 '-trackingId' ) saveNextArg=47;;
                 '-topology' ) saveNextArg=48;;
+                '-packageType' ) saveNextArg=49;;
                 '-waitForTestComplete' ) WAIT_FOR_TEST_COMPLETE=1;;
                 '-cleanAll' ) CLEAN_ALL=1;;
 
@@ -672,16 +677,18 @@ function run_connectivity_test() {
 
     print_highlighted_message "Deploy connectivity test succeeded."
 
-    # Delay for (buffer for module download + test start delay + test duration + verification delay + report generation)
+    # Delay for (buffer for module download + test start delay + test duration + verification delay + report generation + buffer time to check TRC report)
     local module_download_buffer=300
     local time_for_test_to_complete=$((module_download_buffer + \
                                     $(echo $TEST_START_DELAY | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 }') + \
                                     $(echo $TEST_DURATION | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 }') + \
                                     $(echo $VERIFICATION_DELAY | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 }') + \
-                                    $(echo $TIME_FOR_REPORT_GENERATION | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 }')))
+                                    $(echo $TIME_FOR_REPORT_GENERATION | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 }') + \
+                                    $(echo $CHECK_TRC_DELAY | awk -F: '{ print ($1 * 3600) + ($2 * 60) + $3 }')))
     echo "test start delay=$TEST_START_DELAY"
     echo "test duration=$TEST_DURATION"
     echo "verification delay=$VERIFICATION_DELAY"
+    echo "check trc delay=$CHECK_TRC_DELAY"
     echo "time for report generation=$TIME_FOR_REPORT_GENERATION"
     echo "time for test to complete in seconds=$time_for_test_to_complete"
 
@@ -810,6 +817,7 @@ function run_longhaul_test() {
             --device_ca_cert "$DEVICE_CA_CERT" \
             --device_ca_pk "$DEVICE_CA_PRIVATE_KEY" \
             --trusted_ca_certs "$TRUSTED_CA_CERTS" \
+            $PACKAGE_TYPE_ARG \
             $BYPASS_EDGE_INSTALLATION \
             --no-verify && ret=$? || ret=$?
     fi
@@ -870,9 +878,17 @@ function configure_connectivity_settings() {
     NETWORK_CONTROLLER_RUNPROFILE=${NETWORK_CONTROLLER_RUNPROFILE:-Offline}
     TEST_DURATION="${TEST_DURATION:-01:00:00}"
 
+    VERIFICATION_DELAY="${VERIFICATION_DELAY:-00:15:00}"
+
     # Needs to be high due to 1ES conncectivity issues.
-    # If this is ever resolved, can be bumped back to 15 mins.
-    VERIFICATION_DELAY="${VERIFICATION_DELAY:-00:35:00}"
+    # This delay is used by the script to determine how
+    # long after test start to check the TRC report. This
+    # was added to avoid problem scenario where bootstrap
+    # EdgeAgent comes up, test starts, 1ES loses connectivity
+    # then test is started much later than expected. In this
+    # case, we need to wait more than we otherwise would to
+    # check TRC report.
+    CHECK_TRC_DELAY="${TEST_START_DELAY:-00:30:00}"
 
     TEST_INFO="$TEST_INFO,TestDuration=${TEST_DURATION}"
 }
@@ -894,7 +910,7 @@ E2E_TEST_DIR="${E2E_TEST_DIR:-$(pwd)}"
 DEPLOYMENT_TEST_UPDATE_PERIOD="${DEPLOYMENT_TEST_UPDATE_PERIOD:-00:03:00}"
 EVENT_HUB_CONSUMER_GROUP_ID=${EVENT_HUB_CONSUMER_GROUP_ID:-\$Default}
 EDGE_RUNTIME_BUILD_NUMBER=${EDGE_RUNTIME_BUILD_NUMBER:-$ARTIFACT_IMAGE_BUILD_NUMBER}
-TEST_START_DELAY="${TEST_START_DELAY:-00:02:00}"
+TEST_START_DELAY="${TEST_START_DELAY:-00:10:00}"
 UPSTREAM_PROTOCOL="${UPSTREAM_PROTOCOL:-Amqp}"
 TIME_FOR_REPORT_GENERATION="${TIME_FOR_REPORT_GENERATION:-00:10:00}"
 TWIN_UPDATE_SIZE="${TWIN_UPDATE_SIZE:-1}"
@@ -904,6 +920,13 @@ NETWORK_CONTROLLER_FREQUENCIES=${NETWORK_CONTROLLER_FREQUENCIES:(null)}
 
 working_folder="$E2E_TEST_DIR/working"
 quickstart_working_folder="$working_folder/quickstart"
+
+if [ -z $PACKAGE_TYPE ]; then
+    echo 'Package type not specifed default to .deb'
+    PACKAGE_TYPE=deb
+fi
+
+PACKAGE_TYPE_ARG=--package-type="$PACKAGE_TYPE"
 
 if [ "$image_architecture_label" = 'amd64' ]; then
     optimize_for_performance=true
