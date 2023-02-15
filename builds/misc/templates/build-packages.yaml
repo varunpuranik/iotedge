@@ -110,6 +110,18 @@ stages:
               arch: aarch64
               os: ubuntu20.04
               target.iotedged: edgelet/target/aarch64-unknown-linux-gnu/release
+            Ubuntu2204-amd64:
+              arch: amd64
+              os: ubuntu22.04
+              target.iotedged: edgelet/target/release
+            Ubuntu2204-arm32v7:
+              arch: arm32v7
+              os: ubuntu22.04
+              target.iotedged: edgelet/target/armv7-unknown-linux-gnueabihf/release
+            Ubuntu2204-aarch64:
+              arch: aarch64
+              os: ubuntu22.04
+              target.iotedged: edgelet/target/aarch64-unknown-linux-gnu/release
         steps:
           - bash: |
               BASE_VERSION=`cat $BUILD_SOURCESDIRECTORY/edgelet/version.txt`
@@ -153,13 +165,6 @@ stages:
           - ImageOverride -equals agent-aziotedge-ubuntu-20.04-docker-large-disk
         strategy:
           matrix:
-            CBL-Mariner1.0-amd64:
-              arch: amd64
-              os: mariner
-              os_version: 1
-              mariner_release: 1.0-stable
-              target.iotedged: builds/mariner1/out/RPMS
-              target.logs: builds/mariner1/build/logs/pkggen/rpmbuilding/
             CBL-Mariner2.0-amd64:
               arch: amd64
               os: mariner
@@ -243,13 +248,6 @@ stages:
           - ImageOverride -equals agent-aziotedge-ubuntu-20.04-arm64
         strategy:
           matrix:
-            CBL-Mariner1.0-aarch64:
-              arch: aarch64
-              os: mariner
-              os_version: 1
-              mariner_release: 1.0-stable
-              target.iotedged: builds/mariner1/out/RPMS
-              target.logs: builds/mariner1/build/logs/pkggen/rpmbuilding/
             CBL-Mariner2.0-aarch64:
               arch: aarch64
               os: mariner
